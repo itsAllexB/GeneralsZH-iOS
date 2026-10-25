@@ -33,6 +33,13 @@ endif()
 # Top level project, doesn't really affect anything.
 project(genzh LANGUAGES C CXX)
 
+# GeneralsX @build iOS port 25/10/2026 Record source/build paths relative to $HOME (as "~") so a
+# published .ipa does not carry the builder's home directory (and user name) in __FILE__ strings
+# and debug info. Dependencies: cmake/triplets/arm64-ios.cmake, meson-arm64-ios-cross.ini.in.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS" AND DEFINED ENV{HOME})
+    add_compile_options("-ffile-prefix-map=$ENV{HOME}=~")
+endif()
+
 # GeneralsX @build BenderAI 10/02/2026
 # Linux port: Make CompatLib headers globally accessible so Core libraries (WWLib, WWMath, etc.)
 # can access platform compatibility types when building for non-Windows platforms

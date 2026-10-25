@@ -117,10 +117,16 @@ final class OptionsIniTests: XCTestCase {
         XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "")), 100)
         XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 140\n")), 140)
         XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 300\n")), 200)
-        XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 50\n")), 100)
+        XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 70\n")), 70)
+        XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 60\n")), 70, "clamped to the 70% floor")
+        XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = 100\n")), 100)
         XCTAssertEqual(InterfaceScale.read(OptionsIniDocument(text: "GXUiScale = abc\n")), 100)
         XCTAssertEqual(InterfaceScale.clamp(134), 130)
         XCTAssertEqual(InterfaceScale.clamp(95), 100)
+        XCTAssertEqual(InterfaceScale.clamp(64), 70)
+        XCTAssertEqual(InterfaceScale.clamp(80), 80)
+        XCTAssertEqual(InterfaceScale.range, 70...200)
+        XCTAssertEqual(InterfaceScale.defaultPercent, 100)
     }
 
     func testMenuTextSizeReadMatchesAndroid() {

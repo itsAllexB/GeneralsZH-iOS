@@ -1,6 +1,17 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ app folder (copied with Finder)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ app folder (copied with Finder)"
+          }
+        }
+      }
+    },
     "%@ doesn't look like a valid game archive": {
       "extractionState": "manual",
       "localizations": {
@@ -67,6 +78,61 @@
         }
       }
     },
+    "%d of %d game archives downloaded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d of %d game archives downloaded"
+          }
+        }
+      }
+    },
+    "1. Copy the game folder (the one with INIZH.big) to this iPhone: in the Files app, into a folder under On My iPhone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Copy the game folder (the one with INIZH.big) to this iPhone: in the Files app, into a folder under On My iPhone."
+          }
+        }
+      }
+    },
+    "2. Tap Choose game folder and select it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Tap Choose game folder and select it."
+          }
+        }
+      }
+    },
+    "3. Tap Play.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Tap Play."
+          }
+        }
+      }
+    },
+    "A folder on this iPhone (Files › On My iPhone) is recommended. Folders in iCloud Drive work too, but every file must be downloaded first, and the system may remove downloaded copies to free space.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A folder on this iPhone (Files › On My iPhone) is recommended. Folders in iCloud Drive work too, but every file must be downloaded first, and the system may remove downloaded copies to free space."
+          }
+        }
+      }
+    },
     "A move order for combat units is an attack-move: they fight what they meet on the way. Dozers and harvesters still just move.": {
       "extractionState": "manual",
       "localizations": {
@@ -96,6 +162,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "About"
+          }
+        }
+      }
+    },
+    "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game."
           }
         }
       }
@@ -177,13 +254,13 @@
         }
       }
     },
-    "Bundled with the app": {
+    "Bundled with the app (developer build)": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bundled with the app"
+            "value": "Bundled with the app (developer build)"
           }
         }
       }
@@ -199,13 +276,24 @@
         }
       }
     },
-    "Cancel import": {
+    "Cancel copying": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancel import"
+            "value": "Cancel copying"
+          }
+        }
+      }
+    },
+    "Change…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change…"
           }
         }
       }
@@ -228,6 +316,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Checking game data…"
+          }
+        }
+      }
+    },
+    "Checking the game folder…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the game folder…"
+          }
+        }
+      }
+    },
+    "Choose game folder…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose game folder…"
+          }
+        }
+      }
+    },
+    "Choose your game folder below to play.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose your game folder below to play."
+          }
+        }
+      }
+    },
+    "Chosen game folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chosen game folder"
           }
         }
       }
@@ -298,6 +430,50 @@
         }
       }
     },
+    "Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above."
+          }
+        }
+      }
+    },
+    "Copy a game folder into the app…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy a game folder into the app…"
+          }
+        }
+      }
+    },
+    "Copy inside the app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy inside the app"
+          }
+        }
+      }
+    },
+    "Copy into the app instead": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy into the app instead"
+          }
+        }
+      }
+    },
     "Copying %@ failed.": {
       "extractionState": "manual",
       "localizations": {
@@ -364,24 +540,24 @@
         }
       }
     },
-    "Delete imported copy": {
+    "Delete copy": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete imported copy"
+            "value": "Delete copy"
           }
         }
       }
     },
-    "Delete the imported game data?": {
+    "Delete the copy inside the app?": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete the imported game data?"
+            "value": "Delete the copy inside the app?"
           }
         }
       }
@@ -441,6 +617,28 @@
         }
       }
     },
+    "External drive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "External drive"
+          }
+        }
+      }
+    },
+    "External drive “%@”": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "External drive “%@”"
+          }
+        }
+      }
+    },
     "Files": {
       "extractionState": "manual",
       "localizations": {
@@ -448,6 +646,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Files"
+          }
+        }
+      }
+    },
+    "Forget": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget"
+          }
+        }
+      }
+    },
+    "Forget this game folder?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget this game folder?"
+          }
+        }
+      }
+    },
+    "From a computer: connect the iPhone, open it in Finder (or the Apple Devices app on Windows), and drag the game folder onto %@ in its Files tab. The launcher finds it there on its own.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From a computer: connect the iPhone, open it in Finder (or the Apple Devices app on Windows), and drag the game folder onto %@ in its Files tab. The launcher finds it there on its own."
           }
         }
       }
@@ -492,6 +723,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Game data has problems"
+          }
+        }
+      }
+    },
+    "Game folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game folder"
+          }
+        }
+      }
+    },
+    "Game sound plays even when the Ring/Silent switch is set to silent. Turn off to follow the switch. Other apps' audio keeps playing either way.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game sound plays even when the Ring/Silent switch is set to silent. Turn off to follow the switch. Other apps' audio keeps playing either way."
           }
         }
       }
@@ -551,39 +804,6 @@
         }
       }
     },
-    "Import game data folder…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import game data folder…"
-          }
-        }
-      }
-    },
-    "Imported copy": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imported copy"
-          }
-        }
-      }
-    },
-    "Imported game data": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imported game data"
-          }
-        }
-      }
-    },
     "Interface": {
       "extractionState": "manual",
       "localizations": {
@@ -602,6 +822,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Interface Size"
+          }
+        }
+      }
+    },
+    "It may have been moved, renamed or deleted, or the drive is not connected. Choose it again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It may have been moved, renamed or deleted, or the drive is not connected. Choose it again."
           }
         }
       }
@@ -650,17 +881,6 @@
         }
       }
     },
-    "Makes the in-game interface bigger: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Takes effect the next time you launch the game.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Makes the in-game interface bigger: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Takes effect the next time you launch the game."
-          }
-        }
-      }
-    },
     "Menu Text Size": {
       "extractionState": "manual",
       "localizations": {
@@ -705,13 +925,13 @@
         }
       }
     },
-    "No game data found": {
+    "No Zero Hour game folder was found in “%@”. Pick the folder that contains INIZH.big (or the one right above it).": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No game data found"
+            "value": "No Zero Hour game folder was found in “%@”. Pick the folder that contains INIZH.big (or the one right above it)."
           }
         }
       }
@@ -738,6 +958,17 @@
         }
       }
     },
+    "Not a game folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a game folder"
+          }
+        }
+      }
+    },
     "Not enough free space: %@ needed, %@ available.": {
       "extractionState": "manual",
       "localizations": {
@@ -760,6 +991,17 @@
         }
       }
     },
+    "On My iPhone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On My iPhone"
+          }
+        }
+      }
+    },
     "One short line per second showing where frame time goes. Safe to leave on for a whole session; turn this on for FPS or slowdown reports.": {
       "extractionState": "manual",
       "localizations": {
@@ -771,6 +1013,17 @@
         }
       }
     },
+    "Options": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Options"
+          }
+        }
+      }
+    },
     "Performance summary": {
       "extractionState": "manual",
       "localizations": {
@@ -778,17 +1031,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Performance summary"
-          }
-        }
-      }
-    },
-    "Pick the folder Zero Hour is installed in (with INIZH.big). It is copied into the app, checked, and kept out of device backups.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick the folder Zero Hour is installed in (with INIZH.big). It is copied into the app, checked, and kept out of device backups."
           }
         }
       }
@@ -815,13 +1057,35 @@
         }
       }
     },
-    "Play with the imported copy instead of the game data bundled with the app.": {
+    "Play becomes available once iCloud Drive has downloaded the game.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Play with the imported copy instead of the game data bundled with the app."
+            "value": "Play becomes available once iCloud Drive has downloaded the game."
+          }
+        }
+      }
+    },
+    "Play sound in silent mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play sound in silent mode"
+          }
+        }
+      }
+    },
+    "Playing from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing from"
           }
         }
       }
@@ -947,17 +1211,6 @@
         }
       }
     },
-    "Source": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
-          }
-        }
-      }
-    },
     "Source code": {
       "extractionState": "manual",
       "localizations": {
@@ -1046,17 +1299,6 @@
         }
       }
     },
-    "The bundled game data stays. You can import a folder again at any time.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The bundled game data stays. You can import a folder again at any time."
-          }
-        }
-      }
-    },
     "The camera zooms out up to four times further than the map allows.": {
       "extractionState": "manual",
       "localizations": {
@@ -1064,6 +1306,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The camera zooms out up to four times further than the map allows."
+          }
+        }
+      }
+    },
+    "The chosen game folder cannot be opened. Choose it again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The chosen game folder cannot be opened. Choose it again."
           }
         }
       }
@@ -1079,13 +1332,46 @@
         }
       }
     },
-    "The game data (the .big archives) comes from your own copy of the game.": {
+    "The folder and its files stay where they are; the app just stops using it.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The game data (the .big archives) comes from your own copy of the game."
+            "value": "The folder and its files stay where they are; the app just stops using it."
+          }
+        }
+      }
+    },
+    "The folder cannot be opened": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The folder cannot be opened"
+          }
+        }
+      }
+    },
+    "The game can only start once every archive is on this iPhone. Keep the app open, or move the folder to On My iPhone.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game can only start once every archive is on this iPhone. Keep the app open, or move the folder to On My iPhone."
+          }
+        }
+      }
+    },
+    "The game data (the .big archives) is not included: it comes from your own copy of Zero Hour. Copy the game folder to Files › On My iPhone and choose it on Home.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game data (the .big archives) is not included: it comes from your own copy of Zero Hour. Copy the game folder to Files › On My iPhone and choose it on Home."
           }
         }
       }
@@ -1167,13 +1453,24 @@
         }
       }
     },
-    "This build has no bundled GameData folder. Import a game data folder below.": {
+    "This app does not include the game data": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This build has no bundled GameData folder. Import a game data folder below."
+            "value": "This app does not include the game data"
+          }
+        }
+      }
+    },
+    "This folder is read-only, so the port's files could not be copied into it. The game uses the app's own fonts and settings instead, but its interface fixes (Window layouts) will be missing. Move the folder to On My iPhone to fix this.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder is read-only, so the port's files could not be copied into it. The game uses the app's own fonts and settings instead, but its interface fixes (Window layouts) will be missing. Move the folder to On My iPhone to fix this."
           }
         }
       }
@@ -1244,17 +1541,6 @@
         }
       }
     },
-    "Use imported game data": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use imported game data"
-          }
-        }
-      }
-    },
     "Verbose trace log": {
       "extractionState": "manual",
       "localizations": {
@@ -1299,6 +1585,17 @@
         }
       }
     },
+    "Waiting for iCloud Drive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for iCloud Drive"
+          }
+        }
+      }
+    },
     "Write the game's log to the device. Turn off to keep nothing in the background; the logs stay off until you turn this back on. Needed for bug reports.": {
       "extractionState": "manual",
       "localizations": {
@@ -1306,6 +1603,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Write the game's log to the device. Turn off to keep nothing in the background; the logs stay off until you turn this back on. Needed for bug reports."
+          }
+        }
+      }
+    },
+    "You need your own copy of Command & Conquer Generals: Zero Hour, for example from Steam or EA App on a PC.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You need your own copy of Command & Conquer Generals: Zero Hour, for example from Steam or EA App on a PC."
+          }
+        }
+      }
+    },
+    "Your game folder in Files is not touched. You can copy a folder again at any time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your game folder in Files is not touched. You can copy a folder again at any time."
           }
         }
       }
@@ -1328,6 +1647,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ago"
+          }
+        }
+      }
+    },
+    "iCloud Drive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive"
           }
         }
       }

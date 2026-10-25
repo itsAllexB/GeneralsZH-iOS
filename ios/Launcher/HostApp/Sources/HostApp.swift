@@ -27,6 +27,7 @@
 //   3. The host collects the returned arguments, the GX_* environment and the files written, shows
 //      them, prints them to stderr and saves them as Documents/host_result.json for scripted checks.
 
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -79,10 +80,12 @@ struct HostResult: Codable, Equatable {
     var environment: [String: String]
     var optionsIni: String?
     var settingsFiles: [String: String]
+    var audioSessionCategory: String
     var runCount: Int
 
     static let variables = ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE",
-                            "GX_TRACE", "GX_PERF", "GX_AUDIO_TRACE", "GX_TOUCH_DEBUG"]
+                            "GX_TRACE", "GX_PERF", "GX_AUDIO_TRACE", "GX_TOUCH_DEBUG",
+                            "SDL_AUDIO_CATEGORY", "GENERALSX_BUNDLED_FONTS_DIR", "DXVK_CONFIG_FILE"]
     private static var runs = 0
 
     /// Calls gx_launcher_run() and records what it produced.
@@ -113,7 +116,9 @@ struct HostResult: Codable, Equatable {
         }
         let result = HostResult(arguments: arguments, environment: environment,
                                 optionsIni: try? String(contentsOf: options, encoding: .utf8),
-                                settingsFiles: files, runCount: runs)
+                                settingsFiles: files,
+                                audioSessionCategory: AVAudioSession.sharedInstance().category.rawValue,
+                                runCount: runs)
         result.save(home: home)
         return result
     }
@@ -158,6 +163,9 @@ struct ResultView: View {
                                 .textSelection(.enabled)
                         }
                     }
+                }
+                Section("Audio session") {
+                    Text(result.audioSessionCategory).font(.caption.monospaced())
                 }
                 Section("GX_SETTINGS_DIR files") {
                     if result.settingsFiles.isEmpty {

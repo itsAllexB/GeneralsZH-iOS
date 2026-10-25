@@ -180,7 +180,12 @@ namespace
 		const Real gapLo = lo;
 		const Real gapHi = size - hi;
 		Real anchor = ( lo + hi ) * 0.5f;
-		if( gapHi <= size * 0.08f && gapHi < gapLo )
+		// GeneralsX @tweak iOS port 25/10/2026 Content that spans the axis (the control bar, whose
+		// windows start at x 0 and end just short of 800) shrinks towards its centre: anchored on
+		// the edge it happens to touch, the bar sat in the left 70% of the screen at 70%.
+		if( k < 1.0f && gapLo <= size * 0.08f && gapHi <= size * 0.08f )
+			anchor = ( lo + hi ) * 0.5f;
+		else if( gapHi <= size * 0.08f && gapHi < gapLo )
 			anchor = hi;
 		else if( gapLo <= size * 0.08f && gapLo < gapHi )
 			anchor = lo;
@@ -222,7 +227,9 @@ Real userScale()
 		if( env )
 		{
 			const Int percent = atoi( env );
-			if( percent > 100 && percent <= 300 )
+			// GeneralsX @tweak iOS port 25/10/2026 Smaller than 100% too, down to 70%: the HUD and
+			// menus shrink around the same edges they grow from.
+			if( percent >= 70 && percent <= 300 )
 				s_scale = percent / 100.0f;
 		}
 	}
@@ -243,7 +250,7 @@ static const GXUiScale::Transform &ensureLayoutTransform( const char *layoutFile
 static void analyzeLayout( const Rule *rule, const char *layoutFile, const char *text, Int length, Parsing &p )
 {
 	const Real k = GXUiScale::userScale();
-	if( rule && k > 1.0f && text && length > 0 && TheDisplay )
+	if( rule && fabsf( k - 1.0f ) > 0.001f && text && length > 0 && TheDisplay )
 	{
 		// The layout's windows in file order: rectangle (creation coordinates), name, depth.
 		struct Win { Real lo[ 2 ], hi[ 2 ], res[ 2 ]; std::string name; Int depth; Bool hasRect; };
@@ -380,6 +387,8 @@ static void analyzeLayout( const Rule *rule, const char *layoutFile, const char 
 			// thinner, 3% (6% moved the main menu visibly left of where it sits).
 			const Real marginAxis[ 2 ] = { strict ? fminf( rule->margin, 0.03f ) : 0.02f, strict ? rule->margin : 0.02f };
 			Real axisK[ 2 ], axisAdd[ 2 ], fit[ 2 ];
+			// Growing never goes below the original size; shrinking goes all the way to the asked scale.
+			const Real minFit = fminf( 1.0f, k );
 			for( Int a = 0; a < 2; ++a )
 			{
 				box[ a ][ 0 ] = fmaxf( box[ a ][ 0 ], 0.0f );
@@ -390,7 +399,7 @@ static void analyzeLayout( const Rule *rule, const char *layoutFile, const char 
 				const Real margin = marginAxis[ a ];
 				const Real room = strict ? 1.0f - 2.0f * margin
 					: fmaxf( box[ a ][ 1 ], 1.0f - margin ) - fminf( box[ a ][ 0 ], margin );
-				fit[ a ] = fmaxf( 1.0f, fminf( k, fminf( maxFrac[ a ], room ) / extent ) );
+				fit[ a ] = fmaxf( minFit, fminf( k, fminf( maxFrac[ a ], room ) / extent ) );
 			}
 			// Resting on another layout: the bottom edge goes where that layout puts it, and the
 			// content may only grow as far as the room above it.
@@ -405,7 +414,7 @@ static void analyzeLayout( const Rule *rule, const char *layoutFile, const char 
 				// anything else has to fit there.
 				const Real extent = fmaxf( box[ 1 ][ 1 ] - box[ 1 ][ 0 ], 0.001f );
 				if( !rule->wrapSlotPrefix )
-					fit[ 1 ] = fmaxf( 1.0f, fminf( fit[ 1 ], restBottom / extent ) );
+					fit[ 1 ] = fmaxf( minFit, fminf( fit[ 1 ], restBottom / extent ) );
 			}
 			if( rule->uniform )
 				fit[ 0 ] = fit[ 1 ] = fminf( fit[ 0 ], fit[ 1 ] );
@@ -426,7 +435,7 @@ static void analyzeLayout( const Rule *rule, const char *layoutFile, const char 
 			// Text grows with the layout's height, as far as its width -- already stretched by the
 			// screen being wider than 4:3 -- leaves room for.
 			const Real aspectRoom = ( (Real)TheDisplay->getWidth() / 800.0f ) / ( (Real)TheDisplay->getHeight() / 600.0f );
-			t.fontK = fmaxf( 1.0f, fminf( t.ky, t.kx * fmaxf( aspectRoom, 1.0f ) ) );
+			t.fontK = fmaxf( minFit, fminf( t.ky, t.kx * fmaxf( aspectRoom, 1.0f ) ) );
 			// Slots that would leave the top of the screen wrap into further columns to the left.
 			if( t.active && rule->wrapSlotPrefix )
 			{
@@ -637,7 +646,8 @@ static void analyzeLayout( const Rule *rule, const char *layoutFile, const char 
 					(Int)groups.size(), fits ? "rearranged as a column on the left" : "moved off the screen (no room)" );
 			}
 			// The grow target beside the scaled content, shrunk to the room there.
-			if( t.active && growMarker >= 0 )
+			// Only for grown content: a smaller menu leaves the emblem its own place.
+			if( t.active && growMarker >= 0 && k > 1.0f )
 			{
 				// Between the frame's left rule (about 7% in) and the menu panel itself -- not the
 				// content box, which reaches further left through the load-game buttons: centred

@@ -53,7 +53,7 @@ struct InterfaceView: View {
         } header: {
             Text(L("Interface Size"))
         } footer: {
-            Text(L("Makes the in-game interface bigger: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Takes effect the next time you launch the game."))
+            Text(L("Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game."))
         }
     }
 

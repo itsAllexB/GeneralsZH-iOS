@@ -55,10 +55,11 @@ final class LaunchPlanTests: XCTestCase {
         let paths = home.paths
         try paths.ensureSettingsDir()
 
-        // Nothing on disk: only GX_SETTINGS_DIR.
+        // Nothing on disk: GX_SETTINGS_DIR and the audio category (sound in silent mode is ON).
         var plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(plan.environment.map(\.name), ["GX_SETTINGS_DIR"])
+        XCTAssertEqual(plan.environment.map(\.name), ["GX_SETTINGS_DIR", "SDL_AUDIO_CATEGORY"])
         XCTAssertEqual(plan.value(of: "GX_SETTINGS_DIR"), paths.settingsDir.path)
+        XCTAssertEqual(plan.value(of: "SDL_AUDIO_CATEGORY"), "playback")
 
         // Bundled data, a UI scale and two diagnostics.
         try BigWriter.makeGameFolder(at: paths.bundledGameData)
@@ -66,25 +67,63 @@ final class LaunchPlanTests: XCTestCase {
         try MarkerFile.trace.set(true, in: paths)
         try MarkerFile.touchDebug.set(true, in: paths)
         try MarkerFile.loggingOff.set(true, in: paths)
-        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(skipIntro: true), safeInsets: nil)
+        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(skipIntro: true, playSoundInSilentMode: false),
+                                      safeInsets: nil)
         XCTAssertEqual(plan.arguments, ["-nologo"])
         XCTAssertEqual(plan.environment.map(\.name),
-                       ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE", "GX_TRACE", "GX_TOUCH_DEBUG"])
+                       ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE", "GX_TRACE", "GX_TOUCH_DEBUG", "SDL_AUDIO_CATEGORY"])
         XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.bundledGameData.path)
         XCTAssertEqual(plan.value(of: "GX_UI_SCALE"), "140")
         XCTAssertEqual(plan.value(of: "GX_TRACE"), "1")
+        XCTAssertEqual(plan.value(of: "SDL_AUDIO_CATEGORY"), "ambient")
+        XCTAssertNil(plan.value(of: "GENERALSX_BUNDLED_FONTS_DIR"))
+        XCTAssertNil(plan.value(of: "DXVK_CONFIG_FILE"))
 
-        // Imported data wins only when preferred.
+        // The imported copy beats the bundle; a chosen folder beats both.
         try BigWriter.makeGameFolder(at: paths.importedGameData)
         plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.bundledGameData.path)
-        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(preferImportedData: true), safeInsets: nil)
         XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.importedGameData.path)
+        let external = home.root.appendingPathComponent("Files/Zero Hour")
+        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil, externalFolder: external)
+        XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), external.path)
 
-        // No bundle: the imported copy is used even when not preferred.
-        try FileManager.default.removeItem(at: paths.bundledGameData)
-        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.importedGameData.path)
+        // Support files could not be copied: the engine is pointed at the bundle's copies.
+        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil,
+                                      externalFolder: external, supportFallback: true)
+        XCTAssertEqual(plan.value(of: "GENERALSX_BUNDLED_FONTS_DIR"), paths.bundledSupport.appendingPathComponent("fonts").path)
+        XCTAssertEqual(plan.value(of: "DXVK_CONFIG_FILE"), paths.bundledSupport.appendingPathComponent("dxvk.conf").path)
+    }
+
+    func testInterfaceScaleExport() throws {
+        let home = try TempHome()
+        let store = OptionsIniStore(file: home.paths.optionsIni, defaults: nil)
+        func exported() -> String? {
+            LaunchPlanBuilder.plan(paths: home.paths, preferences: LauncherPreferences(), safeInsets: nil).value(of: "GX_UI_SCALE")
+        }
+        XCTAssertNil(exported(), "no key: engine default")
+        try store.update { $0.set("GXUiScale", "70") }
+        XCTAssertEqual(exported(), "70", "below 100 is exported (the engine shrinks the interface)")
+        try store.update { $0.set("GXUiScale", "60") }
+        XCTAssertEqual(exported(), "70", "clamped to the 70% floor")
+        try store.update { $0.set("GXUiScale", "100") }
+        XCTAssertNil(exported(), "100 is the engine's default and may be omitted")
+        try store.update { $0.set("GXUiScale", "250") }
+        XCTAssertEqual(exported(), "200")
+    }
+
+    func testDataSourcePriority() throws {
+        let home = try TempHome()
+        let paths = home.paths
+        let external = home.root.appendingPathComponent("Files/ZH")
+        XCTAssertNil(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil))
+        try BigWriter.makeGameFolder(at: paths.bundledGameData)
+        XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil), .bundled(paths.bundledGameData))
+        try BigWriter.makeGameFolder(at: paths.importedGameData)
+        XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil), .imported(paths.importedGameData))
+        XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: external), .external(external))
+        XCTAssertFalse(GameDataSource.bundled(paths.bundledGameData).takesSupportFiles)
+        XCTAssertTrue(GameDataSource.imported(paths.importedGameData).takesSupportFiles)
+        XCTAssertTrue(GameDataSource.external(external).takesSupportFiles)
     }
 
     func testApplySetsEnvironment() {

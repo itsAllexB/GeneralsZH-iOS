@@ -144,6 +144,43 @@ public enum GameDataValidator {
         return report
     }
 
+    /// Android's isValidGameFolder() for Zero Hour: INIZH.big or INI.big at the top level (any
+    /// case). An iCloud ".INIZH.big.icloud" placeholder counts: the archive is there, just not
+    /// downloaded yet.
+    public static func isGameFolder(_ folder: URL) -> Bool {
+        let names = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+            .map { (UbiquitousFiles.placeholderTarget($0) ?? $0).lowercased() }
+        return requiredArchives.contains { names.contains($0.lowercased()) }
+    }
+
+    /// The game folder at or below `folder`: `folder` itself when it is one, else the ONLY game
+    /// folder within three levels below it (nil when there is none or more than one, so the
+    /// player has to choose). Bounded like Android's findGameFolderBelow(): at most 300 folders
+    /// are listed, hidden folders are skipped, and a game folder is not searched further.
+    public static func findGameFolder(in folder: URL) -> URL? {
+        if isGameFolder(folder) { return folder }
+        var queue: [(URL, Int)] = [(folder, 0)]
+        var found: URL?
+        var listed = 0
+        while !queue.isEmpty && listed < 300 {
+            let (dir, depth) = queue.removeFirst()
+            listed += 1
+            let children = ((try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? [])
+                .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            for child in children {
+                if isGameFolder(child) {
+                    if found != nil { return nil }
+                    found = child
+                } else if depth + 1 < 3 {
+                    queue.append((child, depth + 1))
+                }
+            }
+        }
+        return found
+    }
+
     /// The *.big files directly inside `folder` (any case).
     static func bigFiles(in folder: URL) -> [URL] {
         let items = (try? FileManager.default.contentsOfDirectory(

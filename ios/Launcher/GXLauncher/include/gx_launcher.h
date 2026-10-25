@@ -42,11 +42,19 @@
 //
 // Side effects before returning (setenv(..., 1)):
 //     GX_SETTINGS_DIR    always: <home>/Library/Application Support/GeneralsX/launcher (created)
-//     GX_GAME_DATA_DIR   the game data folder to use (bundled <App>.app/GameData, or the
-//                        imported copy <home>/Library/Application Support/GeneralsX/ImportedGameData)
-//     GX_UI_SCALE        Options.ini GXUiScale, when set
+//     GX_GAME_DATA_DIR   the game data folder, by priority: the folder chosen in Files (its
+//                        security scope is opened and never closed) > the copy inside the app
+//                        (<home>/Library/Application Support/GeneralsX/ImportedGameData) >
+//                        <App>.app/GameData (developer builds); unset when there is none
+//     GX_UI_SCALE        Options.ini GXUiScale (70..200), when set and not 100
 //     GX_TRACE, GX_PERF, GX_AUDIO_TRACE, GX_TOUCH_DEBUG = "1" when that diagnostic is switched on
-// and writes Options.ini / the files in GX_SETTINGS_DIR as the player changes settings.
+//     SDL_AUDIO_CATEGORY "playback" (sound in silent mode, default) or "ambient"
+//     GENERALSX_BUNDLED_FONTS_DIR, DXVK_CONFIG_FILE  <App>.app/GameSupport/fonts and /dxvk.conf,
+//                        only when the support files could not be copied into the game folder
+// It also copies <App>.app/GameSupport into the game folder in use (missing/different files only),
+// seeds Options.ini from GameSupport/DefaultOptions.ini when missing, sets the AVAudioSession
+// category (.playback or .ambient, mixing with others), and writes Options.ini / the files in
+// GX_SETTINGS_DIR as the player changes settings.
 // See INTEGRATION.md for the full contract.
 //
 // Development: GX_LAUNCHER_SKIP=1 in the environment skips the UI; GX_LAUNCHER_SECTION=

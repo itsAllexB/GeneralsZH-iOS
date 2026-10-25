@@ -227,6 +227,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         OUTPUT ${GXL_LIB}
         COMMAND swift build -c release --product GXLauncher
                 --triple ${GXL_TRIPLE} --sdk ${GXL_SDK} --scratch-path ${GXL_SCRATCH}
+                -Xswiftc -file-prefix-map -Xswiftc $ENV{HOME}=~
         WORKING_DIRECTORY ${GXL_DIR}
         DEPENDS ${GXL_SOURCES}
         COMMENT "Building the GXLauncher Swift package (${GXL_TRIPLE})")
@@ -240,6 +241,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         "-L${GXL_SDK}/usr/lib/swift"
         "-L${GXL_TOOLCHAIN_USR}/lib/swift/${GXL_SDK_NAME}"
         "-Wl,-rpath,/usr/lib/swift")
+    # A linker flag is not a dependency: relink when the launcher library changes.
+    set_property(TARGET z_generals APPEND PROPERTY LINK_DEPENDS ${GXL_LIB})
     # package-ios-zh.sh copies the localization bundle next to the executable.
     set(GXL_RESOURCE_BUNDLE ${GXL_OUT}/GXLauncher_GXLauncher.bundle CACHE INTERNAL "")
 endif()

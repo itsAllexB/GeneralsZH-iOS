@@ -30,8 +30,9 @@
 //      window,
 //   3. spins the run loop -- default and UITracking modes, as SDL's own UIKit_PumpEvents() does --
 //      until the player taps Play,
-//   4. measures the safe area, removes the window, writes the environment (setenv) and returns
-//      the extra arguments.
+//   4. measures the safe area, removes the window, prepares the game data (LaunchPreparation:
+//      opens the chosen folder, copies GameSupport into it, seeds Options.ini), sets the audio
+//      session category, writes the environment (setenv) and returns the extra arguments.
 //
 // It must be called on the main thread, from a run-loop callout (timer, performSelector,
 // CFRunLoopPerformBlock) -- which is how SDL calls main() -- and NOT from inside a block on the
@@ -46,6 +47,7 @@
 //   GX_LAUNCHER_SECTION=<name>  open on home | interface | tools | help | logs
 
 #if canImport(UIKit) && os(iOS)
+import AVFoundation
 import Foundation
 import SwiftUI
 import UIKit
@@ -101,13 +103,56 @@ enum LauncherRunner {
     /// Builds the plan from what is on disk now, applies the environment and returns the args.
     private static func finish(paths: LauncherPaths, insets: SafeInsets?) -> [String] {
         let prefs = LauncherPreferences.load(from: paths.preferencesFile)
-        let plan = LaunchPlanBuilder.plan(paths: paths, preferences: prefs, safeInsets: insets)
-        LaunchPlanBuilder.apply(plan)
-        for (name, value) in plan.environment {
+        let outcome = LaunchPreparation.prepare(paths: paths, preferences: prefs, safeInsets: insets)
+        logOutcome(outcome)
+        LaunchPlanBuilder.apply(outcome.plan)
+        configureAudioSession(playInSilentMode: prefs.playSoundInSilentMode)
+        for (name, value) in outcome.plan.environment {
             log("setenv \(name)=\(value)")
         }
-        log("extra args: \(plan.arguments)")
-        return plan.arguments
+        log("extra args: \(outcome.plan.arguments)")
+        return outcome.plan.arguments
+    }
+
+    static func logOutcome(_ outcome: LaunchPreparation.Outcome) {
+        switch outcome.folderState {
+        case .none: break
+        case .unavailable(let name, let reason):
+            log("WARNING: chosen game folder \"\(name)\" is unavailable (\(reason)); not used")
+        case .open(let folder, _):
+            if !outcome.pendingDownloads.isEmpty {
+                log("WARNING: \(outcome.pendingDownloads.count) archive(s) in \(folder.path) are not downloaded from iCloud yet; folder not used")
+            }
+        }
+        switch outcome.source {
+        case .external(let url)?: log("game data: chosen folder \(url.path)")
+        case .imported(let url)?: log("game data: imported copy \(url.path)")
+        case .bundled(let url)?: log("game data: bundled \(url.path)")
+        case nil: log("WARNING: no game data available")
+        }
+        if let support = outcome.support {
+            if !support.hadSupport {
+                log("no GameSupport folder in the bundle; nothing copied")
+            } else if support.complete {
+                log("support files: \(support.written.count) written, \(support.unchanged) unchanged")
+            } else {
+                log("WARNING: could not copy \(support.failed.count) support file(s) into the game folder (read-only?); using the bundle's fonts and dxvk.conf, Window overrides will not load")
+            }
+        }
+    }
+
+    /// "Play sound in silent mode": .playback ignores the Ring/Silent switch, .ambient respects
+    /// it; both mix with other audio. SDL reads SDL_AUDIO_CATEGORY (set by the plan) when it opens
+    /// audio. Errors are logged, never fatal.
+    nonisolated static func configureAudioSession(playInSilentMode: Bool) {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(playInSilentMode ? .playback : .ambient, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+            log("audio session: \(session.category.rawValue)")
+        } catch {
+            log("WARNING: audio session setup failed: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Scenes
@@ -190,7 +235,7 @@ enum LauncherRunner {
         }
     }
 
-    static func log(_ message: String) {
+    nonisolated static func log(_ message: String) {
         fputs("[GX-Launcher] \(message)\n", stderr)
     }
 }
@@ -233,11 +278,11 @@ public func gx_launcher_run() -> UnsafePointer<UnsafePointer<CChar>?> {
         fputs("[GX-Launcher] ERROR: gx_launcher_run() called off the main thread; skipping the UI\n", stderr)
         let paths = LauncherPaths.current
         _ = try? paths.ensureSettingsDir()
-        let plan = LaunchPlanBuilder.plan(paths: paths,
-                                          preferences: LauncherPreferences.load(from: paths.preferencesFile),
-                                          safeInsets: nil)
-        LaunchPlanBuilder.apply(plan)
-        return ExportedArguments.shared.export(plan.arguments)
+        let prefs = LauncherPreferences.load(from: paths.preferencesFile)
+        let outcome = LaunchPreparation.prepare(paths: paths, preferences: prefs, safeInsets: nil)
+        LaunchPlanBuilder.apply(outcome.plan)
+        LauncherRunner.configureAudioSession(playInSilentMode: prefs.playSoundInSilentMode)
+        return ExportedArguments.shared.export(outcome.plan.arguments)
     }
     let args = MainActor.assumeIsolated { LauncherRunner.run() }
     return ExportedArguments.shared.export(args)

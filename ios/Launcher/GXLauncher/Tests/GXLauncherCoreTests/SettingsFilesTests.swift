@@ -101,12 +101,14 @@ final class SettingsFilesTests: XCTestCase {
     func testPreferencesRoundTrip() throws {
         let home = try TempHome()
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile), LauncherPreferences())
-        let prefs = LauncherPreferences(skipIntro: true, preferImportedData: true)
+        let prefs = LauncherPreferences(skipIntro: true, playSoundInSilentMode: false)
         try prefs.save(to: home.paths.preferencesFile)
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile), prefs)
-        try Data("{\"skipIntro\": true}".utf8).write(to: home.paths.preferencesFile)
+        // An older file: sound defaults to ON, the retired "preferImportedData" is ignored.
+        try Data("{\"skipIntro\": true, \"preferImportedData\": true}".utf8).write(to: home.paths.preferencesFile)
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile),
-                       LauncherPreferences(skipIntro: true, preferImportedData: false))
+                       LauncherPreferences(skipIntro: true, playSoundInSilentMode: true))
+        XCTAssertTrue(LauncherPreferences().playSoundInSilentMode, "Play sound in silent mode defaults to ON")
     }
 
     func testPathsMatchTheEngine() {

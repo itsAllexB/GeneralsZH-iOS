@@ -26,8 +26,9 @@
 //     re-importable and gigabytes large).
 //   - Validates the result with GameDataValidator and returns the report; an import that is not a
 //     game folder at all is rejected and removed.
-//   - Fills in the port's runtime files a retail folder lacks (DefaultOptions.ini, dxvk.conf,
-//     fonts/) from the bundled GameData when missing, like Android's copyBundledRuntimeIfMissing().
+//   - Fills in the port's support files a retail folder lacks (<App>/GameSupport: fonts/, Window/,
+//     dxvk.conf, DefaultOptions.ini) with SupportFileSync; dev builds without GameSupport fall back
+//     to the runtime files of the bundled GameData, like Android's copyBundledRuntimeIfMissing().
 //
 // Hidden files and macOS metadata (._*, .DS_Store) are skipped.
 
@@ -56,7 +57,7 @@ public enum ImportError: Error, Equatable, Sendable {
 
 public enum GameDataImporter {
     static let chunkSize = 4 << 20
-    /// Port runtime files copied from the bundled GameData when the import lacks them.
+    /// Port runtime files copied from the bundled GameData when there is no GameSupport folder.
     public static let runtimeFiles = ["DefaultOptions.ini", "dxvk.conf", "fonts"]
 
     /// Copies `source` and returns the validation report of the imported copy.
@@ -102,7 +103,9 @@ public enum GameDataImporter {
             throw ImportError.notAGameFolder
         }
 
-        copyRuntimeFilesIfMissing(from: paths.bundledGameData, to: staging)
+        if !SupportFileSync.sync(from: paths.bundledSupport, to: staging).hadSupport {
+            copyRuntimeFilesIfMissing(from: paths.bundledGameData, to: staging)
+        }
 
         // Swap in the finished copy.
         if fm.fileExists(atPath: paths.importedGameData.path) {

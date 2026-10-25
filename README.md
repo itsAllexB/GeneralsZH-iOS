@@ -17,7 +17,9 @@ What this repo adds on top is everything needed to build and run on **iOS 27 /
 Xcode 27** and on Apple's foldable **iPhone Duo**, plus a native iOS launcher.
 
 **No game assets are included or distributed.** You need your own copy of
-Zero Hour ([Steam](https://store.steampowered.com/app/2732960/)).
+Zero Hour ([Steam](https://store.steampowered.com/app/2732960/)). The app ships without
+game data: copy your Zero Hour folder to the device and choose it in the launcher, as
+on Android.
 
 The Android documentation (online play, Android builds, the Android launcher) is
 kept in [`README.android.md`](README.android.md).
@@ -91,13 +93,36 @@ Before the game starts, a native SwiftUI launcher (source in [`ios/Launcher`](io
 lets you set up the game. It adapts to the screen: a tab bar on narrow screens, a sidebar
 on iPad and the iPhone Duo's inner display.
 
-- **Home** — Play; skip the intro movies; a check of the game data (every `.big` archive
-  and the files the game needs at startup); import a game folder from Files.
-- **Interface** — Interface Size (the in-game HUD, 100–200 %), Menu Text Size, and the
+- **Home** — Play; skip the intro movies; **Choose game folder** (see below); a check of
+  the game data (every `.big` archive and the files the game needs at startup); **Play
+  sound in silent mode** (on by default — off follows the ring/silent switch).
+- **Interface** — Interface Size (the in-game HUD and menus, 70–200 %), Menu Text Size, and the
   control scheme (Classic, Tactical, or your own mix: attack-move, army buttons, higher camera).
 - **Tools** — the game logs of the last two sessions, with search and Share; "Collect logs";
   diagnostics switches (trace, performance, audio, touch overlay).
 - **Help** — about, license and credits.
+
+### Game data
+
+- **From a computer (easiest):** connect the device, open it in Finder (Windows: the
+  Apple Devices app), and drag your Zero Hour folder (the one with `INIZH.big`,
+  `Music.big` …) onto **Generals ZH** in its **Files** tab. The launcher finds it there on
+  its own — nothing to pick.
+- **On the device:** put the folder anywhere under **Files › On My iPhone** (not in the
+  app's own folder, which iOS doesn't show in Files — see below), then **Choose game
+  folder…** in the launcher. Picking a folder above it works too; the launcher looks up to
+  three levels down. Keep it out of iCloud Drive if you can: archives iCloud has offloaded
+  have to download again before the game can start.
+
+Either way the launcher remembers the folder, checks it, and copies the port's own support
+files (fonts, extra window layouts, `dxvk.conf`) into it. Nothing in the folder is deleted.
+
+Why the app's folder is not in Files: that needs `LSSupportsOpeningDocumentsInPlace`, and
+together with Finder file sharing it leaves the document picker of development-signed
+apps stuck on an empty Recents page on iOS 27.2.
+
+**Copy into the app instead** keeps a private copy inside the app's storage — useful when
+the folder lives somewhere slow or unreliable.
 
 Settings are written to `Options.ini` and to files the engine reads from
 `Library/Application Support/GeneralsX/launcher`. How it plugs into the engine:
@@ -114,9 +139,11 @@ Settings are written to `Options.ini` and to files the engine reads from
   `git clone https://github.com/microsoft/vcpkg ~/vcpkg && ~/vcpkg/bootstrap-vcpkg.sh`
 - The [LunarG Vulkan SDK](https://vulkan.lunarg.com/sdk/home) for macOS **with the
   iOS component** (it provides MoltenVK for iOS and `glslangValidator`).
-- Your own Zero Hour game data in `~/GeneralsX/GeneralsZH` — for example with
+- Your own Zero Hour game data — for example with
   `./scripts/get-assets.sh <steam_username>` (needs `brew install --cask steamcmd`),
-  or copied from an existing install (leave out `.exe` and `.dll` files).
+  or copied from an existing install (leave out `.exe` and `.dll` files). It goes onto the
+  device separately (see [Game data](#game-data)); only `--with-data` builds bundle it from
+  `~/GeneralsX/GeneralsZH`.
 
 In every shell you build from:
 
@@ -142,9 +169,21 @@ GX_TEAM_ID=<your team id> GX_BUNDLE_ID=com.you.generalszh \
 - Your team ID is in Xcode → Settings → Accounts. If your keychain holds more than
   one "Apple Development" certificate (for example a personal team and an
   organization), pick one with `GX_SIGN_IDENTITY=<SHA-1 from security find-identity -v -p codesigning>`.
-- The game data (~2.7 GB) is copied into the app; `--dev` skips it for code-only
-  iterations.
+- The app is about 22 MB and has no game data; choose your folder in the launcher.
+  `--with-data` copies `~/GeneralsX/GeneralsZH` (~2.7 GB) into the app instead.
+- `--install` uses the first paired iPhone or iPad (USB or Wi-Fi); `GX_DEVICE=<name or id>`
+  picks another.
 - With a free account the app expires after 7 days; a paid account gives a year.
+
+### Unsigned IPA (for SideStore, AltStore, LiveContainer …)
+
+```sh
+./scripts/build/ios/package-ios-zh.sh --unsigned --ipa
+```
+
+Writes `build/ios-package/GeneralsZH-iOS.ipa`: ad-hoc signed, no provisioning profile, no
+game data. The sideloading tool signs it with your own account. Ready-made IPAs are on the
+[Releases](https://github.com/itsAllexB/GeneralsZH-iOS/releases) page.
 
 ## Known issues
 

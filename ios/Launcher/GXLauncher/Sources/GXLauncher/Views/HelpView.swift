@@ -47,7 +47,7 @@ struct HelpView: View {
             } header: {
                 Text(L("How to play"))
             } footer: {
-                Text(L("The game data (the .big archives) comes from your own copy of the game."))
+                Text(L("The game data (the .big archives) is not included: it comes from your own copy of Zero Hour. Copy the game folder to Files › On My iPhone and choose it on Home."))
             }
 
             Section {

@@ -163,15 +163,17 @@ public struct OptionsIniStore: Sendable {
 
 // MARK: - The two Options.ini keys the launcher edits
 
-/// Interface Size: GXUiScale (percent), read by the engine into GX_UI_SCALE (GXUiScale.cpp).
-/// Android: slider 100...200, step 10, default 100 (SetupActivity.buildInterfaceScaleSection).
+/// Interface Size: GXUiScale (percent), handed to the engine as GX_UI_SCALE (GXUiScale.cpp, which
+/// accepts 70...300 and shrinks the layouts below 100). Slider 70...200, step 10, default 100.
+/// Android's slider starts at 100 (SetupActivity.buildInterfaceScaleSection); iOS also lets the
+/// interface shrink, for the large iPad and iPhone Duo screens.
 public enum InterfaceScale {
     public static let key = "GXUiScale"
-    public static let range: ClosedRange<Int> = 100...200
+    public static let range: ClosedRange<Int> = 70...200
     public static let step = 10
     public static let defaultPercent = 100
 
-    /// Android's readInterfaceScalePercent(): clamped, 100 when missing or unparsable.
+    /// Like Android's readInterfaceScalePercent(): clamped to `range`, 100 when missing or unparsable.
     public static func read(_ doc: OptionsIniDocument) -> Int {
         guard let raw = doc.value(for: key), let value = parsePercent(raw) else { return defaultPercent }
         return min(max(value, range.lowerBound), range.upperBound)

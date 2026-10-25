@@ -30,7 +30,12 @@
 //   $HOME/Documents/generals-stderr.log, generals-stderr-prev.log
 //       The engine's stderr mirror (SDL3Main.cpp), shown by the log viewer.
 //   <App>.app/GameData/
-//       The read-only bundled game data.
+//       Read-only bundled game data (dev builds only; the published IPA ships without it).
+//   <App>.app/GameSupport/
+//       The port's own files the engine expects inside the game folder (fonts/, Window/, dxvk.conf,
+//       DefaultOptions.ini), copied into whichever game folder is used (SupportFileSync).
+//   $GX_SETTINGS_DIR/game_folder.json
+//       The game folder the player chose in Files: a bookmark plus the path below it.
 //
 // A value type with an injectable home and bundle so unit tests can point it at a temp folder.
 
@@ -41,17 +46,23 @@ public struct LauncherPaths: Sendable, Equatable {
     public var home: URL
     /// The game data shipped inside the app bundle (<App>.app/GameData). May not exist.
     public var bundledGameData: URL
+    /// The port's support files shipped inside the app bundle (<App>.app/GameSupport).
+    public var bundledSupport: URL
 
-    public init(home: URL, bundledGameData: URL) {
+    /// `bundledSupport` defaults to the GameSupport folder next to `bundledGameData`.
+    public init(home: URL, bundledGameData: URL, bundledSupport: URL? = nil) {
         self.home = home
         self.bundledGameData = bundledGameData
+        self.bundledSupport = bundledSupport
+            ?? bundledGameData.deletingLastPathComponent().appendingPathComponent("GameSupport", isDirectory: true)
     }
 
     /// The paths of the running app.
     public static var current: LauncherPaths {
         LauncherPaths(
             home: URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true),
-            bundledGameData: Bundle.main.bundleURL.appendingPathComponent("GameData", isDirectory: true)
+            bundledGameData: Bundle.main.bundleURL.appendingPathComponent("GameData", isDirectory: true),
+            bundledSupport: Bundle.main.bundleURL.appendingPathComponent("GameSupport", isDirectory: true)
         )
     }
 
@@ -82,6 +93,18 @@ public struct LauncherPaths: Sendable, Equatable {
 
     /// The launcher's own preferences (skip intro, data source), JSON.
     public var preferencesFile: URL { settingsDir.appendingPathComponent("launcher_prefs.json", isDirectory: false) }
+
+    /// The chosen external game folder (bookmark), see GameFolderStore.
+    public var gameFolderFile: URL { settingsDir.appendingPathComponent("game_folder.json", isDirectory: false) }
+    /// A game folder in Documents the player chose to forget (its path), so it is not adopted again.
+    public var forgottenDocumentsFolderFile: URL { settingsDir.appendingPathComponent("game_folder_forgotten", isDirectory: false) }
+
+    /// DefaultOptions.ini to seed a new Options.ini from: GameSupport's, else the given data folder's.
+    public func defaultOptionsSource(dataFolder: URL?) -> URL? {
+        let candidates = [bundledSupport.appendingPathComponent("DefaultOptions.ini")]
+            + (dataFolder.map { [$0.appendingPathComponent("DefaultOptions.ini")] } ?? [])
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
 
     /// A file inside GX_SETTINGS_DIR.
     public func settingsFile(_ name: String) -> URL {

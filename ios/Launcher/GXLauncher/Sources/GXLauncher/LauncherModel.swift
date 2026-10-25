@@ -56,6 +56,20 @@ final class LauncherModel: ObservableObject {
         case failed(String)
     }
 
+    /// The folder chosen in Files (GameFolderStore).
+    enum ExternalStatus: Equatable {
+        /// No folder chosen.
+        case none
+        /// Opening / checking it.
+        case checking(name: String)
+        /// Chosen, but cannot be reached right now.
+        case unavailable(name: String, reason: String)
+        /// iCloud Drive is still downloading `pending` of the archives.
+        case waitingForICloud(name: String, pending: Int, total: Int)
+        /// Opened and validated.
+        case ready(GameDataReport)
+    }
+
     let paths: LauncherPaths
 
     @Published var section: Section = .home
@@ -74,6 +88,17 @@ final class LauncherModel: ObservableObject {
     @Published private(set) var importedReport: GameDataReport?
     @Published private(set) var isValidating = false
     @Published private(set) var importState: ImportState = .idle
+
+    @Published private(set) var externalStatus: ExternalStatus = .none
+    /// The opened game folder while `externalStatus` is `.ready`.
+    @Published private(set) var externalFolder: URL?
+    @Published private(set) var externalLocation: FolderLocation?
+    /// Set when the support files could not be copied into the game folder.
+    @Published private(set) var supportNotice: String?
+    /// A picked folder that was not accepted.
+    @Published var pickError: String?
+    private var iCloudTotal = 0
+    private var iCloudPolling = false
 
     /// The last failed save, shown as an alert.
     @Published var saveError: String?
@@ -103,24 +128,44 @@ final class LauncherModel: ObservableObject {
         finished = true
     }
 
-    /// The game data the engine will be pointed at.
-    var activeDataFolder: URL? {
-        LaunchPlanBuilder.gameDataDirectory(paths: paths, preferences: preferences)
+    /// The chosen folder, when it can be played from right now.
+    var usableExternalFolder: URL? {
+        guard case .ready(let report) = externalStatus, let folder = externalFolder,
+              !report.issues.contains(.notAGameFolder), !report.issues.contains(.folderMissing) else { return nil }
+        return folder
     }
 
+    /// Where the game data will come from (same priority as the runner).
+    var activeSource: GameDataSource? {
+        LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: usableExternalFolder)
+    }
+
+    /// The game data the engine will be pointed at.
+    var activeDataFolder: URL? { activeSource?.url }
+
     var activeReport: GameDataReport? {
-        guard let folder = activeDataFolder else { return nil }
-        return folder == paths.importedGameData ? importedReport : bundledReport
+        switch activeSource {
+        case .external?:
+            if case .ready(let report) = externalStatus { return report }
+            return nil
+        case .imported?: return importedReport
+        case .bundled?: return bundledReport
+        case nil: return nil
+        }
     }
 
     /// True when Play should ask "play anyway?" first.
     var dataNeedsConfirmation: Bool {
         if isValidating { return false }
-        guard let report = activeReport else { return activeDataFolder == nil }
+        guard let report = activeReport else { return false }
         return !report.isOK
     }
 
+    /// Play needs some game data.
+    var canPlay: Bool { activeSource != nil }
+
     var hasImportedData: Bool { FileManager.default.fileExists(atPath: paths.importedGameData.path) }
+    var hasBundledData: Bool { FileManager.default.fileExists(atPath: paths.bundledGameData.path) }
 
     // MARK: - Launcher preferences
 
@@ -130,9 +175,9 @@ final class LauncherModel: ObservableObject {
         savePreferences(prefs)
     }
 
-    func setPreferImportedData(_ on: Bool) {
+    func setPlaySoundInSilentMode(_ on: Bool) {
         var prefs = preferences
-        prefs.preferImportedData = on
+        prefs.playSoundInSilentMode = on
         savePreferences(prefs)
     }
 
@@ -144,8 +189,7 @@ final class LauncherModel: ObservableObject {
     // MARK: - Options.ini
 
     private var optionsStore: OptionsIniStore {
-        let defaults = activeDataFolder?.appendingPathComponent("DefaultOptions.ini")
-        return OptionsIniStore(file: paths.optionsIni, defaults: defaults)
+        OptionsIniStore(file: paths.optionsIni, defaults: paths.defaultOptionsSource(dataFolder: activeDataFolder))
     }
 
     func setInterfaceScale(_ percent: Int) {
@@ -203,11 +247,13 @@ final class LauncherModel: ObservableObject {
     // MARK: - Game data
 
     func validate() {
+        refreshExternal()
         guard !isValidating else { return }
         isValidating = true
         let paths = paths
         Task.detached(priority: .userInitiated) {
-            let bundled = GameDataValidator.validate(paths.bundledGameData)
+            let bundled = FileManager.default.fileExists(atPath: paths.bundledGameData.path)
+                ? GameDataValidator.validate(paths.bundledGameData) : nil
             let imported = FileManager.default.fileExists(atPath: paths.importedGameData.path)
                 ? GameDataValidator.validate(paths.importedGameData) : nil
             await MainActor.run {
@@ -227,6 +273,8 @@ final class LauncherModel: ObservableObject {
         importTask = Task.detached(priority: .userInitiated) { [self] in
             let scoped = source.startAccessingSecurityScopedResource()
             defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+            // Like "Choose game folder": a parent of the game folder is fine.
+            let source = GameDataValidator.findGameFolder(in: source) ?? source
             // Throttle UI updates to ~10 per second.
             let throttle = ProgressThrottle()
             do {
@@ -240,8 +288,6 @@ final class LauncherModel: ObservableObject {
                     self.importedReport = result
                     self.importState = .idle
                     self.importTask = nil
-                    // A good import is presumably what the player wants to play.
-                    if result.isOK { self.setPreferImportedData(true) }
                 }
             } catch {
                 let message = Self.describe(error)
@@ -261,9 +307,108 @@ final class LauncherModel: ObservableObject {
     func removeImported() {
         report { try GameDataImporter.removeImported(paths: paths) }
         importedReport = nil
-        if preferences.preferImportedData { setPreferImportedData(false) }
         importState = .idle
         objectWillChange.send()
+    }
+
+    // MARK: - Game folder chosen in Files
+
+    /// Opens and checks the chosen folder in the background (also polls while iCloud downloads).
+    func refreshExternal() {
+        guard let reference = GameFolderStore.loadOrAdoptDocumentsFolder(paths: paths) else {
+            externalStatus = .none
+            externalFolder = nil
+            externalLocation = nil
+            return
+        }
+        if case .checking = externalStatus { return }
+        if case .waitingForICloud = externalStatus {} else { externalStatus = .checking(name: reference.name) }
+        let paths = paths
+        Task.detached(priority: .userInitiated) { [self] in
+            let state = GameFolderAccess.open(paths: paths)
+            guard case .open(let folder, _) = state else {
+                let reason: String
+                if case .unavailable(_, let why) = state { reason = why } else { reason = "" }
+                await MainActor.run {
+                    self.externalFolder = nil
+                    self.externalStatus = .unavailable(name: reference.name, reason: reason)
+                }
+                return
+            }
+            let location = FolderLocation.of(folder, paths: paths)
+            let pending = UbiquitousFiles.pendingArchives(in: folder)
+            if !pending.isEmpty {
+                UbiquitousFiles.startDownloading(pending)
+                await MainActor.run {
+                    self.externalFolder = folder
+                    self.externalLocation = location
+                    self.iCloudTotal = max(self.iCloudTotal, pending.count)
+                    self.externalStatus = .waitingForICloud(name: reference.name, pending: pending.count,
+                                                            total: self.iCloudTotal)
+                    self.pollICloud()
+                }
+                return
+            }
+            let report = GameDataValidator.validate(folder)
+            // Put the support files in now, so a read-only folder is reported before Play.
+            let sync = SupportFileSync.sync(from: paths.bundledSupport, to: folder)
+            await MainActor.run {
+                self.iCloudTotal = 0
+                self.externalFolder = folder
+                self.externalLocation = location
+                self.externalStatus = .ready(report)
+                self.supportNotice = sync.hadSupport && !sync.complete
+                    ? L("This folder is read-only, so the port's files could not be copied into it. The game uses the app's own fonts and settings instead, but its interface fixes (Window layouts) will be missing. Move the folder to On My iPhone to fix this.")
+                    : nil
+            }
+        }
+    }
+
+    private func pollICloud() {
+        guard !iCloudPolling else { return }
+        iCloudPolling = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            self.iCloudPolling = false
+            if case .waitingForICloud = self.externalStatus, !self.finished {
+                self.refreshExternal()
+            }
+        }
+    }
+
+    /// The player picked `url` in the folder picker.
+    func chooseGameFolder(_ url: URL) {
+        pickError = nil
+        let paths = paths
+        Task.detached(priority: .userInitiated) { [self] in
+            GameFolderAccess.startAccessing(url)
+            guard let gameFolder = GameDataValidator.findGameFolder(in: url) else {
+                await MainActor.run {
+                    self.pickError = L("No Zero Hour game folder was found in “%@”. Pick the folder that contains INIZH.big (or the one right above it).", url.lastPathComponent)
+                }
+                return
+            }
+            do {
+                let reference = try GameFolderStore.makeReference(picked: url, gameFolder: gameFolder)
+                try GameFolderStore.save(reference, paths: paths)
+            } catch {
+                await MainActor.run { self.pickError = error.localizedDescription }
+                return
+            }
+            await MainActor.run {
+                self.iCloudTotal = 0
+                self.externalStatus = .none
+                self.refreshExternal()
+            }
+        }
+    }
+
+    func forgetGameFolder() {
+        GameFolderStore.forget(paths: paths)
+        externalStatus = .none
+        externalFolder = nil
+        externalLocation = nil
+        supportNotice = nil
     }
 
     nonisolated static func describe(_ error: Error) -> String {

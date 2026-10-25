@@ -16,8 +16,13 @@
 **	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// GeneralsX @feature iOS launcher 25/10/2026 Home: Play, "Skip intro movies", the game data check
-// and importing a game data folder (SetupActivity.buildHomeSection on Android).
+// GeneralsX @feature iOS launcher 25/10/2026 Home: Play, launch options, the game folder chosen in
+// Files (Android's "Select game folder"), and copying a game folder into the app as the secondary
+// option (SetupActivity.buildHomeSection on Android).
+//
+// The published app ships without game data. Data source priority (LaunchPlanBuilder.gameDataSource):
+// the chosen folder > the copy inside the app > <App>/GameData (developer builds). Play is disabled
+// when there is none, and Home explains how to get the data.
 
 #if canImport(UIKit) && os(iOS)
 import SwiftUI
@@ -25,8 +30,15 @@ import GXLauncherCore
 
 struct HomeView: View {
     @ObservedObject var model: LauncherModel
-    @State private var showPicker = false
+
+    enum PickerPurpose: String, Identifiable {
+        case choose, copy
+        var id: String { rawValue }
+    }
+
+    @State private var picker: PickerPurpose?
     @State private var confirmDelete = false
+    @State private var confirmForget = false
 
     var body: some View {
         Form {
@@ -34,6 +46,40 @@ struct HomeView: View {
                 PlayButton(model: model, compact: false)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
+            } footer: {
+                if !model.canPlay {
+                    Text(playFooter)
+                }
+            }
+
+            gameFolderSection
+
+            if !model.canPlay, model.externalStatus == .none {
+                noDataSection
+            }
+
+            if let source = model.activeSource {
+                Section {
+                    LabeledContent(L("Playing from"), value: Self.sourceName(source))
+                    // The chosen folder's report is already shown in its own section.
+                    if case .external = source {
+                    } else if let report = model.activeReport {
+                        ReportSummary(report: report)
+                    } else if model.isValidating {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text(L("Checking game data…"))
+                        }
+                    }
+                    Button {
+                        model.validate()
+                    } label: {
+                        Label(L("Check again"), systemImage: "arrow.clockwise")
+                    }
+                    .disabled(model.isValidating)
+                } header: {
+                    Text(L("Game data"))
+                }
             }
 
             Section {
@@ -41,33 +87,184 @@ struct HomeView: View {
                     SettingLabel(title: L("Skip intro movies"),
                                  detail: L("EA logos, the intro and other movies before the menu are skipped; the game goes straight to loading."))
                 }
-            }
-
-            Section {
-                GameDataStatusView(model: model)
-                Button {
-                    model.validate()
-                } label: {
-                    Label(L("Check again"), systemImage: "arrow.clockwise")
+                Toggle(isOn: Binding(get: { model.preferences.playSoundInSilentMode }, set: model.setPlaySoundInSilentMode)) {
+                    SettingLabel(title: L("Play sound in silent mode"),
+                                 detail: L("Game sound plays even when the Ring/Silent switch is set to silent. Turn off to follow the switch. Other apps' audio keeps playing either way."))
                 }
-                .disabled(model.isValidating)
             } header: {
-                Text(L("Game data"))
+                Text(L("Options"))
             }
 
             importSection
         }
         .navigationTitle(LauncherInfo.appName)
-        .sheet(isPresented: $showPicker) {
-            FolderPicker { url in model.startImport(from: url) }
-                .ignoresSafeArea()
+        .sheet(item: $picker) { purpose in
+            FolderPicker { url in
+                switch purpose {
+                case .choose: model.chooseGameFolder(url)
+                case .copy: model.startImport(from: url)
+                }
+            }
+            .ignoresSafeArea()
         }
-        .confirmationDialog(L("Delete the imported game data?"), isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button(L("Delete imported copy"), role: .destructive) { model.removeImported() }
+        .alert(L("Not a game folder"), isPresented: Binding(
+            get: { model.pickError != nil }, set: { if !$0 { model.pickError = nil } })) {
+            Button(L("OK"), role: .cancel) {}
         } message: {
-            Text(L("The bundled game data stays. You can import a folder again at any time."))
+            Text(model.pickError ?? "")
+        }
+        .confirmationDialog(L("Delete the copy inside the app?"), isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button(L("Delete copy"), role: .destructive) { model.removeImported() }
+        } message: {
+            Text(L("Your game folder in Files is not touched. You can copy a folder again at any time."))
+        }
+        .confirmationDialog(L("Forget this game folder?"), isPresented: $confirmForget, titleVisibility: .visible) {
+            Button(L("Forget"), role: .destructive) { model.forgetGameFolder() }
+        } message: {
+            Text(L("The folder and its files stay where they are; the app just stops using it."))
         }
     }
+
+    private var playFooter: String {
+        switch model.externalStatus {
+        case .waitingForICloud: return L("Play becomes available once iCloud Drive has downloaded the game.")
+        case .unavailable: return L("The chosen game folder cannot be opened. Choose it again.")
+        case .checking: return L("Checking the game folder…")
+        default: return L("Choose your game folder below to play.")
+        }
+    }
+
+    static func sourceName(_ source: GameDataSource) -> String {
+        switch source {
+        case .external: return L("Chosen game folder")
+        case .imported: return L("Copy inside the app")
+        case .bundled: return L("Bundled with the app (developer build)")
+        }
+    }
+
+    // MARK: No game data yet
+
+    private var noDataSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Label(L("This app does not include the game data"), systemImage: "shippingbox")
+                    .font(.headline)
+                Text(L("You need your own copy of Command & Conquer Generals: Zero Hour, for example from Steam or EA App on a PC."))
+                Text(L("1. Copy the game folder (the one with INIZH.big) to this iPhone: in the Files app, into a folder under On My iPhone."))
+                Text(L("2. Tap Choose game folder and select it."))
+                Text(L("3. Tap Play."))
+                Text(L("From a computer: connect the iPhone, open it in Finder (or the Apple Devices app on Windows), and drag the game folder onto %@ in its Files tab. The launcher finds it there on its own.", LauncherInfo.appName))
+                    .foregroundStyle(.secondary)
+            }
+            .font(.subheadline)
+            .padding(.vertical, 4)
+        }
+    }
+
+    // MARK: Chosen game folder
+
+    @ViewBuilder
+    private var gameFolderSection: some View {
+        Section {
+            switch model.externalStatus {
+            case .none:
+                Button {
+                    picker = .choose
+                } label: {
+                    Label(L("Choose game folder…"), systemImage: "folder.badge.gearshape")
+                }
+                .accessibilityIdentifier("gx.chooseFolder")
+            case .checking(let name):
+                folderHeader(name: name)
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text(L("Checking game data…"))
+                }
+                folderButtons
+            case .unavailable(let name, let reason):
+                folderHeader(name: name)
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("The folder cannot be opened")).font(.headline)
+                        Text(L("It may have been moved, renamed or deleted, or the drive is not connected. Choose it again."))
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        if !reason.isEmpty {
+                            Text(reason).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
+                }
+                folderButtons
+            case .waitingForICloud(let name, let pending, let total):
+                folderHeader(name: name)
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: Double(max(total - pending, 0)), total: Double(max(total, 1))) {
+                        Label(L("Waiting for iCloud Drive"), systemImage: "icloud.and.arrow.down")
+                    } currentValueLabel: {
+                        Text(L("%d of %d game archives downloaded", max(total - pending, 0), total))
+                    }
+                    Text(L("The game can only start once every archive is on this iPhone. Keep the app open, or move the folder to On My iPhone."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                folderButtons
+            case .ready(let report):
+                folderHeader(name: model.externalFolder?.lastPathComponent ?? "")
+                ReportSummary(report: report)
+                if let notice = model.supportNotice {
+                    Label {
+                        Text(notice).font(.footnote)
+                    } icon: {
+                        Image(systemName: "info.circle").foregroundStyle(.orange)
+                    }
+                }
+                folderButtons
+            }
+        } header: {
+            Text(L("Game folder"))
+        } footer: {
+            Text(L("A folder on this iPhone (Files › On My iPhone) is recommended. Folders in iCloud Drive work too, but every file must be downloaded first, and the system may remove downloaded copies to free space."))
+        }
+    }
+
+    private func folderHeader(name: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.headline).lineLimit(2)
+                if let location = model.externalLocation {
+                    Text(Self.locationName(location)).font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+        } icon: {
+            Image(systemName: model.externalLocation == .iCloudDrive ? "icloud" : "folder")
+        }
+    }
+
+    @ViewBuilder
+    private var folderButtons: some View {
+        Button {
+            picker = .choose
+        } label: {
+            Label(L("Change…"), systemImage: "folder.badge.gearshape")
+        }
+        Button(role: .destructive) {
+            confirmForget = true
+        } label: {
+            Label(L("Forget"), systemImage: "minus.circle")
+        }
+    }
+
+    static func locationName(_ location: FolderLocation) -> String {
+        switch location {
+        case .appDocuments: return L("%@ app folder (copied with Finder)", LauncherInfo.appName)
+        case .onDevice: return L("On My iPhone")
+        case .iCloudDrive: return L("iCloud Drive")
+        case .externalDrive(let name): return name.isEmpty ? L("External drive") : L("External drive “%@”", name)
+        case .other: return L("Files")
+        }
+    }
+
+    // MARK: Copy into the app (secondary)
 
     @ViewBuilder
     private var importSection: some View {
@@ -90,50 +287,47 @@ struct HomeView: View {
                             .truncationMode(.middle)
                     }
                 }
-                Button(L("Cancel import"), role: .cancel) { model.cancelImport() }
+                Button(L("Cancel copying"), role: .cancel) { model.cancelImport() }
             case .failed(let message):
                 Label {
                     Text(message)
                 } icon: {
                     Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
                 }
-                importButton(title: L("Try again…"))
+                copyButton(title: L("Try again…"))
             case .idle:
                 if model.hasImportedData {
                     if let report = model.importedReport {
                         ReportSummary(report: report)
                     }
-                    Toggle(isOn: Binding(get: { model.preferences.preferImportedData }, set: model.setPreferImportedData)) {
-                        SettingLabel(title: L("Use imported game data"),
-                                     detail: L("Play with the imported copy instead of the game data bundled with the app."))
-                    }
-                    importButton(title: L("Replace with another folder…"))
+                    copyButton(title: L("Replace with another folder…"))
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
-                        Label(L("Delete imported copy"), systemImage: "trash")
+                        Label(L("Delete copy"), systemImage: "trash")
                     }
                 } else {
-                    importButton(title: L("Import game data folder…"))
+                    copyButton(title: L("Copy a game folder into the app…"))
                 }
             }
         } header: {
-            Text(L("Imported game data"))
+            Text(L("Copy into the app instead"))
         } footer: {
-            Text(L("Pick the folder Zero Hour is installed in (with INIZH.big). It is copied into the app, checked, and kept out of device backups."))
+            Text(L("Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above."))
         }
     }
 
-    private func importButton(title: String) -> some View {
+    private func copyButton(title: String) -> some View {
         Button {
-            showPicker = true
+            picker = .copy
         } label: {
-            Label(title, systemImage: "folder.badge.plus")
+            Label(title, systemImage: "square.and.arrow.down.on.square")
         }
     }
 }
 
-/// The big Play button. Asks before starting with game data that failed the check.
+/// The big Play button. Disabled without game data; asks before starting with game data that
+/// failed the check.
 struct PlayButton: View {
     @ObservedObject var model: LauncherModel
     var compact: Bool
@@ -153,44 +347,13 @@ struct PlayButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
+        .disabled(!model.canPlay)
         .accessibilityIdentifier("gx.play")
         .alert(L("Game data has problems"), isPresented: $confirm) {
             Button(L("Play anyway")) { model.play() }
             Button(L("Cancel"), role: .cancel) {}
         } message: {
             Text(L("The game may fail to start or show missing textures. See Home > Game data for details."))
-        }
-    }
-}
-
-/// Status of the game data the engine will use.
-struct GameDataStatusView: View {
-    @ObservedObject var model: LauncherModel
-
-    var body: some View {
-        if model.isValidating && model.activeReport == nil {
-            HStack(spacing: 12) {
-                ProgressView()
-                Text(L("Checking game data…"))
-            }
-        } else if let folder = model.activeDataFolder {
-            VStack(alignment: .leading, spacing: 6) {
-                LabeledContent(L("Source"),
-                               value: folder == model.paths.importedGameData ? L("Imported copy") : L("Bundled with the app"))
-                if let report = model.activeReport {
-                    ReportSummary(report: report)
-                }
-            }
-        } else {
-            Label {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("No game data found")).font(.headline)
-                    Text(L("This build has no bundled GameData folder. Import a game data folder below."))
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
-            } icon: {
-                Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
-            }
         }
     }
 }

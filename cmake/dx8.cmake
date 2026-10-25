@@ -182,6 +182,7 @@ elseif(APPLE AND SAGE_USE_MOLTENVK)
       set(IOS_SDK_NAME iphoneos)
       set(IOS_MIN_FLAG "-miphoneos-version-min=16.0")
     endif()
+    set(GX_HOME_DIR "$ENV{HOME}")  # paths under it become "~" (see the top-level CMakeLists.txt)
     execute_process(COMMAND xcrun --sdk ${IOS_SDK_NAME} --show-sdk-path
                     OUTPUT_VARIABLE IOS_SDK OUTPUT_STRIP_TRAILING_WHITESPACE
                     COMMAND_ERROR_IS_FATAL ANY)
