@@ -12,7 +12,7 @@ name: GeneralsXZH
 options:
   bundleIdPrefix: me.ammaar
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 targets:
   GeneralsXZH:
     type: application
