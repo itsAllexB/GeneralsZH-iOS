@@ -26,11 +26,13 @@
 // Read once per process. Always empty off Android.
 #pragma once
 
+#include "Common/GXSettingsPath.h"
+
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
@@ -51,10 +53,10 @@ namespace GXManagedMods
 		if (!s_loaded)
 		{
 			s_loaded = true;
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 			char path[256];
-			const int userId = (int)(getuid() / 100000);
-			snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/mods_active.txt", userId);
+			if (!GXSettingsFilePath("mods_active.txt", path, sizeof(path)))
+				path[0] = '\0';
 			FILE *fp = fopen(path, "r");
 			if (fp != nullptr)
 			{
@@ -104,12 +106,12 @@ namespace GXManagedMods
 		if (dir.back() != '/' && dir.back() != '\\')
 			dir += '/';
 		dir += "Profiles/";
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 		mkdir(dir.c_str(), 0775);
 #endif
 		dir += name;
 		dir += '/';
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 		mkdir(dir.c_str(), 0775);
 #endif
 		return dir;

@@ -154,6 +154,11 @@ if [[ "${DEV_MODE}" != "1" ]]; then
     done
     cp "${CONFIG_SRC}/dxvk.conf" "${APP}/GameData/dxvk.conf"
     cp "${CONFIG_SRC}/Options.ini" "${APP}/GameData/DefaultOptions.ini"
+    # Window layouts added by this port (army column, Extras menu); the engine
+    # loads loose Window/*.wnd files over the stock archives.
+    WND_SRC="${PROJECT_ROOT}/android/app/src/main/assets/gamedata/Window"
+    mkdir -p "${APP}/GameData/Window"
+    cp "${WND_SRC}"/*.wnd "${APP}/GameData/Window/"
     echo "    bundled $(du -sh "${APP}/GameData" | cut -f1) of game data"
 fi
 

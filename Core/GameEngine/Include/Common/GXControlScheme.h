@@ -31,9 +31,11 @@
 // Read once per process. Always the retail behaviour off Android.
 #pragma once
 
+#include "Common/GXSettingsPath.h"
+
 #include <cstdio>
 #include <cstring>
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 #include <unistd.h>
 #endif
 
@@ -56,11 +58,11 @@ namespace GXControlScheme
 			s_loaded = true;
 			for (int i = 0; i < OPTION_COUNT; ++i)
 				s_state[i] = 0;
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 			static const char *const kNames[OPTION_COUNT] = { "attack_move", "army_buttons", "camera_high" };
 			char path[256];
-			const int userId = (int)(getuid() / 100000);
-			snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/control_scheme", userId);
+			if (!GXSettingsFilePath("control_scheme", path, sizeof(path)))
+				path[0] = '\0';
 			FILE *fp = fopen(path, "r");
 			if (fp != nullptr)
 			{

@@ -1104,6 +1104,9 @@ int main(int argc, char* argv[])
 		// SDL3GameEngine.cpp; SDL's automatic touch->mouse synthesis would
 		// double-deliver finger 1 and fight the two-finger pan logic.
 		SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+		// Same for pens (Apple Pencil on iPad): SDL would otherwise synthesize mouse
+		// events from them as well, next to the gesture translator's own.
+		SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
 #endif
 #if defined(__ANDROID__)
 		// Keep running (paused by our own lifecycle gate) instead of blocking

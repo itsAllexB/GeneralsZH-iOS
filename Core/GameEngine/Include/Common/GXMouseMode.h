@@ -28,7 +28,9 @@
 // per process. Always FALSE off Android.
 #pragma once
 
-#if defined(__ANDROID__)
+#include "Common/GXSettingsPath.h"
+
+#if GX_HAS_SETTINGS_DIR
 #include <cstdio>
 #include <unistd.h>
 #endif
@@ -37,14 +39,14 @@
 // 100 when the marker is empty or unreadable.
 inline int GXMouseCursorPercent()
 {
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 	static int percent = -1;
 	if (percent < 0)
 	{
 		percent = 100;
 		char path[256];
-		const int userId = (int)(getuid() / 100000);
-		snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/mouse_mode", userId);
+		if (!GXSettingsFilePath("mouse_mode", path, sizeof(path)))
+			path[0] = '\0';
 		FILE *fp = fopen(path, "r");
 		if (fp != nullptr)
 		{
@@ -62,13 +64,13 @@ inline int GXMouseCursorPercent()
 
 inline bool GXMouseModeEnabled()
 {
-#if defined(__ANDROID__)
+#if GX_HAS_SETTINGS_DIR
 	static int state = -1;
 	if (state < 0)
 	{
 		char path[256];
-		const int userId = (int)(getuid() / 100000);
-		snprintf(path, sizeof(path), "/data/user/%d/com.generalsx.zerohour/files/mouse_mode", userId);
+		if (!GXSettingsFilePath("mouse_mode", path, sizeof(path)))
+			path[0] = '\0';
 		state = (access(path, F_OK) == 0) ? 1 : 0;
 	}
 	return state == 1;
