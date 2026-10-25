@@ -22,6 +22,14 @@ if(SAGE_USE_SDL3)
     set(SDL3_VERSION "3.4.2")
     set(SDL3_URL "https://github.com/libsdl-org/SDL/releases/download/release-${SDL3_VERSION}/SDL3-${SDL3_VERSION}.tar.gz")
     set(SDL3_URL_HASH "SHA256=ef39a2e3f9a8a78296c40da701967dd1b0d0d6e267e483863ce70f8a03b4050c")
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # iOS 27 SDK fixes from the release-3.4.x branch (window orientation at
+        # launch, windows in the right scene; libsdl-org/SDL#16436, #16355), not
+        # yet in a tagged release. Return to a release tarball once 3.4.20 ships.
+        set(SDL3_VERSION "3.4.19-c170299")
+        set(SDL3_URL "https://github.com/libsdl-org/SDL/archive/c170299097007991ad4a42691d21589cbaba775a.tar.gz")
+        set(SDL3_URL_HASH "SHA256=e86bdae9c65388575b5e321b9f40641b503cb01d07503f428849bd99e90a56ce")
+    endif()
     
     FetchContent_Declare(
         SDL3

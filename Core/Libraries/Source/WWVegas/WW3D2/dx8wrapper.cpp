@@ -217,6 +217,18 @@ bool DX8Wrapper::Pillarbox_Setup(int gameW, int gameH)
 	int bbW = (int)_PresentParameters.BackBufferWidth;
 	int bbH = (int)_PresentParameters.BackBufferHeight;
 	float density = 1.0f;
+	{
+		// The fit rect is in backbuffer pixels, but Pillarbox_Get_Rect() must return
+		// window points (what mouse/touch coordinates use), so take the pixel density
+		// from the window even when the size comes from the present parameters.
+		// Leaving it at 1.0 on high-DPI iOS (2.8-3x) mapped every touch to about a
+		// third of its position whenever the game was letterboxed.
+		int winW = 0, winH = 0;
+		float winDensity = 1.0f;
+		if (GetWindowSize(winW, winH, winDensity) && winDensity > 0.0f) {
+			density = winDensity;
+		}
+	}
 
 	if (bbW <= 0 || bbH <= 0) {
 		if (!GetWindowSize(bbW, bbH, density)) {

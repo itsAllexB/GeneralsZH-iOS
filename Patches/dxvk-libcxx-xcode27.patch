@@ -1,0 +1,17 @@
+diff --git a/src/dxvk/dxvk_pipemanager.cpp b/src/dxvk/dxvk_pipemanager.cpp
+index 84a07c1f..fd8ef0d7 100644
+--- a/src/dxvk/dxvk_pipemanager.cpp
++++ b/src/dxvk/dxvk_pipemanager.cpp
+@@ -441,9 +441,11 @@ namespace dxvk {
+     DxvkBindingLayout bindings(VK_SHADER_STAGE_FRAGMENT_BIT);
+     auto layout = createPipelineLayout(bindings);
+ 
++    // Pass the (default) key explicitly: Xcode 27's libc++ fails to compile
++    // piecewise emplace with an empty key tuple.
+     auto iter = m_shaderLibraries.emplace(
+       std::piecewise_construct,
+-      std::tuple(),
++      std::forward_as_tuple(key),
+       std::tuple(m_device, this, key, layout));
+     return &iter.first->second;
+   }

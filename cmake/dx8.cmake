@@ -87,25 +87,28 @@ elseif(APPLE AND SAGE_USE_MOLTENVK)
     set(DXVK_SOURCE_DIR "${DXVK_LOCAL_FORK_DIR}")
     message(STATUS "DXVK macOS build: using local fork source at ${DXVK_SOURCE_DIR}")
     # iOS needs Patches/dxvk-ios.patch (bundle-relative MoltenVK dlopen + SDL3
-    # drawable fixes) — apply it idempotently: skip when the working tree
+    # drawable fixes) and dxvk-libcxx-xcode27.patch (builds with Xcode 27's
+    # libc++) — apply them idempotently: skip a patch when the working tree
     # already carries it (reverse-check passes), fail the configure otherwise
     # so an unpatched DXVK can never ship silently.
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-      execute_process(
-        COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check "${CMAKE_SOURCE_DIR}/Patches/dxvk-ios.patch"
-        RESULT_VARIABLE DXVK_PATCH_ALREADY_APPLIED
-        ERROR_QUIET)
-      if(NOT DXVK_PATCH_ALREADY_APPLIED EQUAL 0)
+      foreach(DXVK_IOS_PATCH dxvk-ios.patch dxvk-libcxx-xcode27.patch)
         execute_process(
-          COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply "${CMAKE_SOURCE_DIR}/Patches/dxvk-ios.patch"
-          RESULT_VARIABLE DXVK_PATCH_RESULT)
-        if(NOT DXVK_PATCH_RESULT EQUAL 0)
-          message(FATAL_ERROR "Failed to apply Patches/dxvk-ios.patch to references/fbraz3-dxvk — the iOS DXVK build requires it.")
+          COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply --reverse --check "${CMAKE_SOURCE_DIR}/Patches/${DXVK_IOS_PATCH}"
+          RESULT_VARIABLE DXVK_PATCH_ALREADY_APPLIED
+          ERROR_QUIET)
+        if(NOT DXVK_PATCH_ALREADY_APPLIED EQUAL 0)
+          execute_process(
+            COMMAND git -C "${DXVK_LOCAL_FORK_DIR}" apply "${CMAKE_SOURCE_DIR}/Patches/${DXVK_IOS_PATCH}"
+            RESULT_VARIABLE DXVK_PATCH_RESULT)
+          if(NOT DXVK_PATCH_RESULT EQUAL 0)
+            message(FATAL_ERROR "Failed to apply Patches/${DXVK_IOS_PATCH} to references/fbraz3-dxvk — the iOS DXVK build requires it.")
+          endif()
+          message(STATUS "DXVK iOS: applied Patches/${DXVK_IOS_PATCH}")
+        else()
+          message(STATUS "DXVK iOS: Patches/${DXVK_IOS_PATCH} already applied")
         endif()
-        message(STATUS "DXVK iOS: applied Patches/dxvk-ios.patch")
-      else()
-        message(STATUS "DXVK iOS: Patches/dxvk-ios.patch already applied")
-      endif()
+      endforeach()
     endif()
   elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # The remote clone has no way to receive the iOS patch; a silent fallback
@@ -170,7 +173,16 @@ elseif(APPLE AND SAGE_USE_MOLTENVK)
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # The cross file is generated from a template so the iPhoneOS SDK path comes
     # from xcrun (Xcode-beta / renamed installs) instead of a hardcoded Xcode.app.
-    execute_process(COMMAND xcrun --sdk iphoneos --show-sdk-path
+    # Simulator builds (CMAKE_OSX_SYSROOT=iphonesimulator) need the simulator SDK
+    # and its own minimum-version flag.
+    if(CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+      set(IOS_SDK_NAME iphonesimulator)
+      set(IOS_MIN_FLAG "-mios-simulator-version-min=16.0")
+    else()
+      set(IOS_SDK_NAME iphoneos)
+      set(IOS_MIN_FLAG "-miphoneos-version-min=16.0")
+    endif()
+    execute_process(COMMAND xcrun --sdk ${IOS_SDK_NAME} --show-sdk-path
                     OUTPUT_VARIABLE IOS_SDK OUTPUT_STRIP_TRAILING_WHITESPACE
                     COMMAND_ERROR_IS_FATAL ANY)
     configure_file(${CMAKE_SOURCE_DIR}/cmake/meson-arm64-ios-cross.ini.in

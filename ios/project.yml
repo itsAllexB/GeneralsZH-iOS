@@ -25,7 +25,7 @@ targets:
         DEVELOPMENT_TEAM: 7S264298H8
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
-        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_UIRequiresFullScreen: NO
         ENABLE_BITCODE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
@@ -35,14 +35,29 @@ targets:
         CFBundleShortVersionString: "1.04"
         CFBundleVersion: "10"
         UIFileSharingEnabled: true
-        LSSupportsOpeningDocumentsInPlace: true
-        UIRequiresFullScreen: true
+        # No LSSupportsOpeningDocumentsInPlace: combined with file sharing it leaves
+        # re-signed apps' document picker stuck on an empty Recents page (iOS 27.2).
+        # Resizable, so the surface follows the iPhone Duo's inner display into
+        # landscape (it ignores the orientation lock); SDL3Main picks a landscape
+        # resolution even when the window starts out portrait.
+        UIRequiresFullScreen: false
+        # The iOS 27 SDK requires the UIScene life cycle; SDL3 supplies the delegate.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: SDLUIKitSceneDelegate
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchStoryboardName: ""
+        # All orientations: the iPhone Duo's inner display ignores a landscape-only
+        # lock and lays the app out portrait even when held landscape.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
         UIApplicationSupportsIndirectInputEvents: true
         NSLocalNetworkUsageDescription: "Used for LAN multiplayer game discovery."

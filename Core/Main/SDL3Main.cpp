@@ -1335,7 +1335,12 @@ int main(int argc, char* argv[])
 			// the engine's resolution-aware font scaling (GlobalLanguage).
 			int winW = 0, winH = 0;
 			SDL_GetWindowSizeInPixels(TheSDL3Window, &winW, &winH);
-			if (!userSetRes && winW > 0 && winH > 0 && winW > winH) {
+			// The game is landscape-only, but the window can still be portrait at this
+			// point (e.g. the iPhone Duo's inner display, rotated only after launch).
+			if (winW < winH) {
+				const int t = winW; winW = winH; winH = t;
+			}
+			if (!userSetRes && winW > 0 && winH > 0) {
 				static char xresVal[16], yresVal[16];
 				static char xresFlag[] = "-xres";
 				static char yresFlag[] = "-yres";
