@@ -6,7 +6,7 @@ command-line arguments. Along the way it sets environment variables and writes t
 the engine reads.
 
 ```
-ios-launcher/
+ios/Launcher/
   GXLauncher/                 Swift package (iOS 16+, no dependencies), static library product
     include/gx_launcher.h     the C API
     Sources/GXLauncherCore/   Foundation-only logic (Options.ini, control_scheme, BIG validator, ...)
@@ -212,35 +212,21 @@ home-indicator inset -- a slight over-estimate, never clipping). Measured on iPh
 landscape `0.0649,0.0000,0.0649,0.0455`, from portrait `0.0649,0.0000,0.0649,0.0773`. Long term
 the engine could instead call SDL3's `SDL_GetWindowSafeArea()` once the window is landscape.
 
-## 5. What the engine must change
+## 5. Engine side (done in this repository)
 
-The iOS tree (`~/GeneralsX-src/GeneralsX`) has none of the Android launcher readers yet;
-`GXControlScheme.h`, `GXMouseMode.h`, `GXLogging.h`, `GXSafeArea.*`, `GXUiScale.*`, `GXTrace.h`
-exist only in the Android clone, and the first three hard-code
-`/data/user/%d/com.generalsx.zerohour/files/<name>` under `#if defined(__ANDROID__)` (always off
-elsewhere). Per the coordinator the engine side now reads `control_scheme`, `mouse_mode`,
-`logging_off` and `mods_active.txt` from `$GX_SETTINGS_DIR/<name>` on iOS -- that matches this
-launcher. Remaining items:
-
-1. **Call `gx_launcher_run()`** at the top of the iOS block of `main()` and append its result to
-   argv (section 1). Link the library (section 2).
-2. **Game data folder:** prefer `getenv("GX_GAME_DATA_DIR")` over the argv[0]-derived
-   `<bundle>/GameData` for `chdir()`, and treat it as "bundle data" for the Options.ini seed. Keep
-   the Documents fallback when it is unset. The Documents "tidy-up" must stay keyed on the real
-   bundle (it must never touch `ImportedGameData`, which is not in Documents anyway).
-3. **Collect logs:** before opening `Documents/generals-stderr.log`, skip the stderr mirror when
-   `$GX_SETTINGS_DIR/logging_off` exists (GXLogging.h semantics: nothing logged in the
-   background). The launcher runs before the mirror, so this is a plain `access()` check.
-4. **Diagnostics:** nothing to do -- GXTrace.h and `touchDebugEnabled()` already honour
-   `GX_TRACE` / `GX_PERF` / `GX_AUDIO_TRACE` / `GX_TOUCH_DEBUG`, which the launcher sets. (Their
-   marker-file fallback looks in the CWD, i.e. the read-only bundle; it can stay as is.)
-5. **Interface Size:** `GXUiScale.cpp` reads `GX_UI_SCALE`, which the launcher sets from Options.ini.
-   (Android's SDL3Main.cpp copies `GXUiScale` from Options.ini into the env itself; the iOS one
-   does not, and with the launcher it does not need to.) Requires GXUiScale.* to be ported.
-6. **Safe area:** port `parseGxSafeInsets` + `GXSafeArea.*` from the Android tree, or ignore the
-   argument (the iOS `parseCommandLine` skips unknown arguments one by one, so it is harmless).
-7. **Menu Text Size** already works: `ResolutionFontAdjustment` is read by
-   `OptionPreferences::getResolutionFontAdjustment()`.
+- `Core/Main/SDL3Main.cpp` calls `gx_launcher_run()` first in the iOS branch of `main()` and
+  appends the returned arguments to `__argv`; it prefers `GX_GAME_DATA_DIR` as the working
+  directory and skips the stderr mirror when "Collect logs" is off (`GXLoggingDisabled()`).
+- `GeneralsMD/Code/Main/CMakeLists.txt` builds the package with SwiftPM and force-loads it
+  (`GX_HAS_IOS_LAUNCHER`); `scripts/build/ios/package-ios-zh.sh` copies the resource bundle.
+- The settings readers (`GXControlScheme.h`, `GXMouseMode.h`, `GXLogging.h`,
+  `GXManagedMods.h`) use `Common/GXSettingsPath.h`, which resolves `$GX_SETTINGS_DIR/<name>` on
+  iOS. `GXUiScale` is read from Options.ini by `SDL3Main.cpp`; `-gxSafeInsets` is parsed by
+  `CommandLine.cpp` (`GXSafeArea`). Diagnostics use the `GX_TRACE` / `GX_PERF` /
+  `GX_AUDIO_TRACE` / `GX_TOUCH_DEBUG` environment variables.
+- iOS builds use the system allocator (`RTS_GAMEMEMORY_ENABLE=OFF`): the game's pool replaces
+  `operator new`/`delete` process-wide and is not thread-safe, which crashed SwiftUI's
+  multithreaded text rendering.
 
 ## 6. Behaviour decisions where Android was ambiguous
 
