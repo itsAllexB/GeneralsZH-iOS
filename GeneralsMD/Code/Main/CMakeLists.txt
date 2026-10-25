@@ -198,3 +198,48 @@ if(ANDROID)
         "-Wl,--version-script,${_gx_hide_alloc_map}"
     )
 endif()
+
+# GeneralsX @feature iOS port 25/10/2026 Native SwiftUI launcher (ios/Launcher/GXLauncher).
+# Built with SwiftPM into a static library and force-loaded so all Swift metadata survives;
+# SDL3Main.cpp calls gx_launcher_run() before the engine starts. The Swift runtime ships with
+# iOS, so only the SDK/toolchain Swift library paths are needed for its autolink entries.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+        set(GXL_SDK_NAME iphonesimulator)
+        set(GXL_TRIPLE arm64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}-simulator)
+    else()
+        set(GXL_SDK_NAME iphoneos)
+        set(GXL_TRIPLE arm64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET})
+    endif()
+    execute_process(COMMAND xcrun --sdk ${GXL_SDK_NAME} --show-sdk-path
+                    OUTPUT_VARIABLE GXL_SDK OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    execute_process(COMMAND xcrun --sdk ${GXL_SDK_NAME} --find swiftc
+                    OUTPUT_VARIABLE GXL_SWIFTC OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    get_filename_component(GXL_TOOLCHAIN_USR "${GXL_SWIFTC}/../.." ABSOLUTE)
+
+    set(GXL_DIR ${CMAKE_SOURCE_DIR}/ios/Launcher/GXLauncher)
+    set(GXL_SCRATCH ${CMAKE_BINARY_DIR}/gxlauncher)
+    set(GXL_OUT ${GXL_SCRATCH}/out/Products/Release-${GXL_SDK_NAME})
+    set(GXL_LIB ${GXL_OUT}/libGXLauncher.a)
+    file(GLOB_RECURSE GXL_SOURCES CONFIGURE_DEPENDS
+         ${GXL_DIR}/Package.swift ${GXL_DIR}/Sources/*.swift ${GXL_DIR}/Sources/*.xcstrings ${GXL_DIR}/include/*.h)
+    add_custom_command(
+        OUTPUT ${GXL_LIB}
+        COMMAND swift build -c release --product GXLauncher
+                --triple ${GXL_TRIPLE} --sdk ${GXL_SDK} --scratch-path ${GXL_SCRATCH}
+        WORKING_DIRECTORY ${GXL_DIR}
+        DEPENDS ${GXL_SOURCES}
+        COMMENT "Building the GXLauncher Swift package (${GXL_TRIPLE})")
+    add_custom_target(gxlauncher_build DEPENDS ${GXL_LIB})
+    add_dependencies(z_generals gxlauncher_build)
+
+    target_include_directories(z_generals PRIVATE ${GXL_DIR}/include)
+    target_compile_definitions(z_generals PRIVATE GX_HAS_IOS_LAUNCHER=1)
+    target_link_libraries(z_generals PRIVATE
+        "-Wl,-force_load,${GXL_LIB}"
+        "-L${GXL_SDK}/usr/lib/swift"
+        "-L${GXL_TOOLCHAIN_USR}/lib/swift/${GXL_SDK_NAME}"
+        "-Wl,-rpath,/usr/lib/swift")
+    # package-ios-zh.sh copies the localization bundle next to the executable.
+    set(GXL_RESOURCE_BUNDLE ${GXL_OUT}/GXLauncher_GXLauncher.bundle CACHE INTERNAL "")
+endif()

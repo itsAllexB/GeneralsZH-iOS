@@ -1,0 +1,5 @@
+build/
+.build/
+.swiftpm/
+HostApp/GXLauncherHost.xcodeproj/
+xcuserdata/

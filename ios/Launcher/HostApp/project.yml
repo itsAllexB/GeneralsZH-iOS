@@ -1,0 +1,76 @@
+# Command & Conquer Generals Zero Hour(tm)
+# Copyright 2025 Electronic Arts Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# XcodeGen spec for the launcher test host (not shipped). Run `xcodegen` in this folder.
+#
+# The host mimics how the engine runs on iOS: a UIScene delegate that, like SDL3's
+# SDLUIKitSceneDelegate, shows a launch window and then calls "main" from a run-loop timer
+# (performSelector:afterDelay:0). "main" calls the C entry point gx_launcher_run() through
+# ../GXLauncher/include/gx_launcher.h -- exactly what the engine will do -- and then lists the
+# returned arguments, the environment and the files written, so the contract can be checked
+# without the game.
+name: GXLauncherHost
+options:
+  bundleIdPrefix: dev.generalsx
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+packages:
+  GXLauncher:
+    path: ../GXLauncher
+targets:
+  GXLauncherHost:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: GXLauncher
+        product: GXLauncher
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.generalsx.launcherhost
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/HostApp-Bridging-Header.h
+        HEADER_SEARCH_PATHS: $(SRCROOT)/../GXLauncher/include
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: GX Launcher Host
+        CFBundleShortVersionString: "1.04"
+        CFBundleVersion: "10"
+        UILaunchScreen: {}
+        UIFileSharingEnabled: true
+        UIRequiresFullScreen: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).HostSceneDelegate
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight

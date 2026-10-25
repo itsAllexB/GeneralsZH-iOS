@@ -114,8 +114,18 @@ if [[ -d "${MVK_FRAMEWORK}" ]]; then
 else
     echo "ERROR: MoltenVK.framework not found at ${MVK_FRAMEWORK}"
     echo "  Run scripts/build/ios/fetch-moltenvk.sh (pinned version + checksum)."
-    
+
     exit 1
+fi
+
+# The native launcher's localization bundle (built by CMake with the engine). Without it the
+# launcher still works, showing the English text built into the code.
+GXL_BUNDLE="${BUILD_DIR}/gxlauncher/out/Products/Release-iphoneos/GXLauncher_GXLauncher.bundle"
+if [[ -d "${GXL_BUNDLE}" ]]; then
+    cp -R "${GXL_BUNDLE}" "${APP}/"
+    echo "    embedded GXLauncher_GXLauncher.bundle"
+else
+    echo "    (launcher resource bundle not found at ${GXL_BUNDLE}; English fallback text)"
 fi
 
 # Game assets inside the bundle (iOS-sanctioned home for read-only resources):

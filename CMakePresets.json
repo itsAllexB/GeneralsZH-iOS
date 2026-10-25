@@ -257,6 +257,7 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "description": "iOS port: arm64 device build with MoltenVK (static, from $VULKAN_SDK) for graphics, SDL3 for windowing/touch, OpenAL for audio, FFmpeg (vcpkg) for video. Requires the LunarG Vulkan SDK with the iOS MoltenVK xcframework; export VULKAN_SDK=$HOME/VulkanSDK/<version>/macOS.",
             "cacheVariables": {
+                "RTS_GAMEMEMORY_ENABLE": "OFF",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CMAKE_SYSTEM_NAME": "iOS",

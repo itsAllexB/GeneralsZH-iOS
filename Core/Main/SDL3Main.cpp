@@ -32,6 +32,10 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include "Common/GXLogging.h"
+#if defined(GX_HAS_IOS_LAUNCHER)
+#include "gx_launcher.h"
+#include <vector>
+#endif
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
@@ -482,6 +486,23 @@ int main(int argc, char* argv[])
 	__argv = argv;
 
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#if defined(GX_HAS_IOS_LAUNCHER)
+	// GeneralsX @feature iOS port 25/10/2026 Native launcher (ios/Launcher). It shows its UI on the
+	// active scene and returns once Play is tapped, after writing the settings files and Options.ini
+	// and setting GX_SETTINGS_DIR / GX_GAME_DATA_DIR / GX_UI_SCALE / diagnostics env vars. Runs
+	// first so "Collect logs" (logging_off) already applies to the stderr mirror below. Its extra
+	// arguments (-gxSafeInsets, -nologo) are appended to the command line.
+	{
+		const char *const *extra = gx_launcher_run();
+		static std::vector<char *> s_launcherArgv;
+		s_launcherArgv.assign(argv, argv + argc);
+		for (int i = 0; extra[i] != nullptr; ++i)
+			s_launcherArgv.push_back(const_cast<char *>(extra[i]));
+		s_launcherArgv.push_back(nullptr);
+		__argc = (int)s_launcherArgv.size() - 1;
+		__argv = s_launcherArgv.data();
+	}
+#endif
 	// Diagnostic capture: an icon-launched app's stderr goes nowhere we can read,
 	// so mirror it to a file in Library/Caches (purgeable, not user-visible). This
 	// lets us pull a full engine log after an on-device session — essential for
@@ -495,7 +516,8 @@ int main(int argc, char* argv[])
 		// covers modules that read it before the config.
 		setenv("DXVK_LOG_LEVEL", "none", 0);
 		const char *diagHome = getenv("HOME");
-		if (diagHome != nullptr) {
+		// The launcher's "Collect logs" switch (GXLogging.h) turns the mirror off.
+		if (diagHome != nullptr && !GXLoggingDisabled()) {
 			char diagPath[1024];
 			char prevPath[1024];
 			// Documents, not Library/Caches: Caches is purgeable (a device restart or
@@ -579,7 +601,14 @@ int main(int argc, char* argv[])
 		}
 
 		bool usingBundleData = false;
-		if (bundleData[0] != '\0' && access(bundleData, R_OK) == 0) {
+		// The launcher may point at game data imported into Application Support instead.
+		const char *launcherData = getenv("GX_GAME_DATA_DIR");
+		if (launcherData != nullptr && launcherData[0] != '\0' && access(launcherData, R_OK) == 0 &&
+		    chdir(launcherData) == 0) {
+			usingBundleData = true;
+			fprintf(stderr, "INFO: iOS working directory (launcher): %s\n", launcherData);
+		}
+		if (!usingBundleData && bundleData[0] != '\0' && access(bundleData, R_OK) == 0) {
 			if (chdir(bundleData) == 0) {
 				usingBundleData = true;
 				fprintf(stderr, "INFO: iOS working directory (bundle): %s\n", bundleData);

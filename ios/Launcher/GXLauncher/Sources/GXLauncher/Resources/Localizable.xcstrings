@@ -1,0 +1,1348 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ doesn't look like a valid game archive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ doesn't look like a valid game archive"
+          }
+        }
+      }
+    },
+    "%@ is empty (0 bytes)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is empty (0 bytes)"
+          }
+        }
+      }
+    },
+    "%@ is missing expected game data — likely an incomplete copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is missing expected game data — likely an incomplete copy"
+          }
+        }
+      }
+    },
+    "%@ of %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ of %@"
+          }
+        }
+      }
+    },
+    "%d archives, %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d archives, %@"
+          }
+        }
+      }
+    },
+    "%d matching lines": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d matching lines"
+          }
+        }
+      }
+    },
+    "A move order for combat units is an attack-move: they fight what they meet on the way. Dozers and harvesters still just move.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A move order for combat units is an attack-move: they fight what they meet on the way. Dozers and harvesters still just move."
+          }
+        }
+      }
+    },
+    "A pointer instead of tapping where you want: a connected mouse works as on a PC, and without one your finger moves the cursor like a laptop touchpad.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A pointer instead of tapping where you want: a connected mouse works as on a PC, and without one your finger moves the cursor like a laptop touchpad."
+          }
+        }
+      }
+    },
+    "About": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "Additional terms (GPL section 7): no trademark or publicity rights are granted. This license does not give you any right, title or interest in \"Command & Conquer\" or any other Electronic Arts trademark, and this program claims no affiliation with Electronic Arts Inc. Modified versions must be marked as such and not identified as the original program. The program is provided \"as is\", with all faults and without warranty of any kind; your use is at your sole risk.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Additional terms (GPL section 7): no trademark or publicity rights are granted. This license does not give you any right, title or interest in \"Command & Conquer\" or any other Electronic Arts trademark, and this program claims no affiliation with Electronic Arts Inc. Modified versions must be marked as such and not identified as the original program. The program is provided \"as is\", with all faults and without warranty of any kind; your use is at your sole risk."
+          }
+        }
+      }
+    },
+    "App": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        }
+      }
+    },
+    "Army buttons": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Army buttons"
+          }
+        }
+      }
+    },
+    "As in the original game: a move order just moves, the camera zooms out to the usual height, the army column opens with the control groups only.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As in the original game: a move order just moves, the camera zooms out to the usual height, the army column opens with the control groups only."
+          }
+        }
+      }
+    },
+    "Attack on the move": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attack on the move"
+          }
+        }
+      }
+    },
+    "Audio log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio log"
+          }
+        }
+      }
+    },
+    "Base Generals game data missing: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Base Generals game data missing: %@"
+          }
+        }
+      }
+    },
+    "Bundled with the app": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bundled with the app"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "Cancel import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel import"
+          }
+        }
+      }
+    },
+    "Check again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check again"
+          }
+        }
+      }
+    },
+    "Checking game data…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking game data…"
+          }
+        }
+      }
+    },
+    "Classic": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Classic"
+          }
+        }
+      }
+    },
+    "Clear both logs?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear both logs?"
+          }
+        }
+      }
+    },
+    "Clear logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear logs"
+          }
+        }
+      }
+    },
+    "Collect logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collect logs"
+          }
+        }
+      }
+    },
+    "Combat units attack on the move, the army column opens with the army buttons too, and the camera zooms out up to four times higher.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combat units attack on the move, the army column opens with the army buttons too, and the camera zooms out up to four times higher."
+          }
+        }
+      }
+    },
+    "Control scheme": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control scheme"
+          }
+        }
+      }
+    },
+    "Copying %@ failed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying %@ failed."
+          }
+        }
+      }
+    },
+    "Copying game data…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying game data…"
+          }
+        }
+      }
+    },
+    "Could not save the setting": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save the setting"
+          }
+        }
+      }
+    },
+    "Credits": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credits"
+          }
+        }
+      }
+    },
+    "Cursor size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cursor size"
+          }
+        }
+      }
+    },
+    "Custom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom"
+          }
+        }
+      }
+    },
+    "Delete imported copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete imported copy"
+          }
+        }
+      }
+    },
+    "Delete the imported game data?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the imported game data?"
+          }
+        }
+      }
+    },
+    "Diagnostics": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        }
+      }
+    },
+    "Draws the touch layer's state over the game: the current gesture, your finger, the pointer and the camera scroll anchor.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draws the touch layer's state over the game: the current gesture, your finger, the pointer and the camera scroll anchor."
+          }
+        }
+      }
+    },
+    "EA logos, the intro and other movies before the menu are skipped; the game goes straight to loading.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EA logos, the intro and other movies before the menu are skipped; the game goes straight to loading."
+          }
+        }
+      }
+    },
+    "Electronic Arts (GPL source release) · TheSuperHackers · Fighter19 · fbraz3/GeneralsX · ammaarreshi · MYSOREZ (Android port) · realkot": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Electronic Arts (GPL source release) · TheSuperHackers · Fighter19 · fbraz3/GeneralsX · ammaarreshi · MYSOREZ (Android port) · realkot"
+          }
+        }
+      }
+    },
+    "English text": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English text"
+          }
+        }
+      }
+    },
+    "Files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files"
+          }
+        }
+      }
+    },
+    "GNU General Public License v3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GNU General Public License v3"
+          }
+        }
+      }
+    },
+    "Game data": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game data"
+          }
+        }
+      }
+    },
+    "Game data OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game data OK"
+          }
+        }
+      }
+    },
+    "Game data has problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game data has problems"
+          }
+        }
+      }
+    },
+    "Help": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help"
+          }
+        }
+      }
+    },
+    "Higher camera": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Higher camera"
+          }
+        }
+      }
+    },
+    "Home": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home"
+          }
+        }
+      }
+    },
+    "How to play": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to play"
+          }
+        }
+      }
+    },
+    "Import cancelled.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import cancelled."
+          }
+        }
+      }
+    },
+    "Import game data folder…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import game data folder…"
+          }
+        }
+      }
+    },
+    "Imported copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported copy"
+          }
+        }
+      }
+    },
+    "Imported game data": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported game data"
+          }
+        }
+      }
+    },
+    "Interface": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface"
+          }
+        }
+      }
+    },
+    "Interface Size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface Size"
+          }
+        }
+      }
+    },
+    "Last session": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last session"
+          }
+        }
+      }
+    },
+    "License": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License"
+          }
+        }
+      }
+    },
+    "Log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log"
+          }
+        }
+      }
+    },
+    "Logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs"
+          }
+        }
+      }
+    },
+    "Makes the in-game interface bigger: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Takes effect the next time you launch the game.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makes the in-game interface bigger: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Takes effect the next time you launch the game."
+          }
+        }
+      }
+    },
+    "Menu Text Size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu Text Size"
+          }
+        }
+      }
+    },
+    "More": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        }
+      }
+    },
+    "Mouse and touchpad": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mouse and touchpad"
+          }
+        }
+      }
+    },
+    "Neither INIZH.big nor INI.big is in this folder: it is not a Zero Hour folder.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neither INIZH.big nor INI.big is in this folder: it is not a Zero Hour folder."
+          }
+        }
+      }
+    },
+    "No game data found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No game data found"
+          }
+        }
+      }
+    },
+    "No log yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No log yet"
+          }
+        }
+      }
+    },
+    "No matching lines.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching lines."
+          }
+        }
+      }
+    },
+    "Not enough free space: %@ needed, %@ available.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough free space: %@ needed, %@ available."
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "One short line per second showing where frame time goes. Safe to leave on for a whole session; turn this on for FPS or slowdown reports.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One short line per second showing where frame time goes. Safe to leave on for a whole session; turn this on for FPS or slowdown reports."
+          }
+        }
+      }
+    },
+    "Performance summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performance summary"
+          }
+        }
+      }
+    },
+    "Pick the folder Zero Hour is installed in (with INIZH.big). It is copied into the app, checked, and kept out of device backups.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick the folder Zero Hour is installed in (with INIZH.big). It is copied into the app, checked, and kept out of device backups."
+          }
+        }
+      }
+    },
+    "Play": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        }
+      }
+    },
+    "Play anyway": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play anyway"
+          }
+        }
+      }
+    },
+    "Play with the imported copy instead of the game data bundled with the app.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play with the imported copy instead of the game data bundled with the app."
+          }
+        }
+      }
+    },
+    "Previous session": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous session"
+          }
+        }
+      }
+    },
+    "Records what the sound system is doing: music and speech buffers, movie audio, every sound that starts or stops.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records what the sound system is doing: music and speech buffers, movie audio, every sound that starts or stops."
+          }
+        }
+      }
+    },
+    "Reload": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reload"
+          }
+        }
+      }
+    },
+    "Replace with another folder…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace with another folder…"
+          }
+        }
+      }
+    },
+    "Reset to 100%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to 100%"
+          }
+        }
+      }
+    },
+    "Reset to the game's default (70%)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to the game's default (70%)"
+          }
+        }
+      }
+    },
+    "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time you launch the game.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time you launch the game."
+          }
+        }
+      }
+    },
+    "Search log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search log"
+          }
+        }
+      }
+    },
+    "Settings folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings folder"
+          }
+        }
+      }
+    },
+    "Share": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        }
+      }
+    },
+    "Skip intro movies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip intro movies"
+          }
+        }
+      }
+    },
+    "Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "Source code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
+          }
+        }
+      }
+    },
+    "TODO: Drag to draw a selection box": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TODO: Drag to draw a selection box"
+          }
+        }
+      }
+    },
+    "TODO: Long-press for the context action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TODO: Long-press for the context action"
+          }
+        }
+      }
+    },
+    "TODO: Tap to select a unit or building": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TODO: Tap to select a unit or building"
+          }
+        }
+      }
+    },
+    "TODO: Two fingers to scroll the map, pinch to zoom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TODO: Two fingers to scroll the map, pinch to zoom"
+          }
+        }
+      }
+    },
+    "Tactical": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tactical"
+          }
+        }
+      }
+    },
+    "Takes effect the next time the game starts. Works in skirmish, the campaign and online games alike: only how your orders are given changes, not the game's rules.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takes effect the next time the game starts. Works in skirmish, the campaign and online games alike: only how your orders are given changes, not the game's rules."
+          }
+        }
+      }
+    },
+    "The army column opens with the buttons that select every combat unit on screen or on the whole map, planes, helicopters or ground forces.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The army column opens with the buttons that select every combat unit on screen or on the whole map, planes, helicopters or ground forces."
+          }
+        }
+      }
+    },
+    "The bundled game data stays. You can import a folder again at any time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The bundled game data stays. You can import a folder again at any time."
+          }
+        }
+      }
+    },
+    "The camera zooms out up to four times further than the map allows.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera zooms out up to four times further than the map allows."
+          }
+        }
+      }
+    },
+    "The complete corresponding source code of this app is available at the address above.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The complete corresponding source code of this app is available at the address above."
+          }
+        }
+      }
+    },
+    "The game data (the .big archives) comes from your own copy of the game.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game data (the .big archives) comes from your own copy of the game."
+          }
+        }
+      }
+    },
+    "The game data folder is missing.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game data folder is missing."
+          }
+        }
+      }
+    },
+    "The game may fail to start or show missing textures. See Home > Game data for details.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game may fail to start or show missing textures. See Home > Game data for details."
+          }
+        }
+      }
+    },
+    "The game writes its log while it runs. Play once, then come back here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game writes its log while it runs. Play once, then come back here."
+          }
+        }
+      }
+    },
+    "The game's log from the last session and the one before it. Share it with a bug report.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game's log from the last session and the one before it. Share it with a bug report."
+          }
+        }
+      }
+    },
+    "The selected folder could not be read.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected folder could not be read."
+          }
+        }
+      }
+    },
+    "The selected folder does not contain INIZH.big or INI.big. Pick the folder the game is installed in.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected folder does not contain INIZH.big or INI.big. Pick the folder the game is installed in."
+          }
+        }
+      }
+    },
+    "These turn on extra logging for bug reports. Leave them all off for normal play: they can slow the game down or produce large logs. If someone asks you to turn one on, enable it, reproduce the problem, then share the log.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These turn on extra logging for bug reports. Leave them all off for normal play: they can slow the game down or produce large logs. If someone asks you to turn one on, enable it, reproduce the problem, then share the log."
+          }
+        }
+      }
+    },
+    "This build has no bundled GameData folder. Import a game data folder below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build has no bundled GameData folder. Import a game data folder below."
+          }
+        }
+      }
+    },
+    "This is a modified version of the Command & Conquer Generals: Zero Hour source code that Electronic Arts released under the GNU GPL v3. It is not the original program, and it is not made, endorsed or supported by Electronic Arts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a modified version of the Command & Conquer Generals: Zero Hour source code that Electronic Arts released under the GNU GPL v3. It is not the original program, and it is not made, endorsed or supported by Electronic Arts."
+          }
+        }
+      }
+    },
+    "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+          }
+        }
+      }
+    },
+    "Tools": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools"
+          }
+        }
+      }
+    },
+    "Touch input overlay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch input overlay"
+          }
+        }
+      }
+    },
+    "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect the next time the game starts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect the next time the game starts."
+          }
+        }
+      }
+    },
+    "Try again…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again…"
+          }
+        }
+      }
+    },
+    "Use imported game data": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use imported game data"
+          }
+        }
+      }
+    },
+    "Verbose trace log": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbose trace log"
+          }
+        }
+      }
+    },
+    "Version": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "Very detailed internal logging (UI, fonts, INI files) for chasing a specific hang or bug. Can grow to a huge log over a long session.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very detailed internal logging (UI, fonts, INI files) for chasing a specific hang or bug. Can grow to a huge log over a long session."
+          }
+        }
+      }
+    },
+    "View logs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View logs"
+          }
+        }
+      }
+    },
+    "Write the game's log to the device. Turn off to keep nothing in the background; the logs stay off until you turn this back on. Needed for bug reports.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write the game's log to the device. Turn off to keep nothing in the background; the logs stay off until you turn this back on. Needed for bug reports."
+          }
+        }
+      }
+    },
+    "Your own mix of the switches below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your own mix of the switches below."
+          }
+        }
+      }
+    },
+    "ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ago"
+          }
+        }
+      }
+    },
+    "middle shortened": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "middle shortened"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
