@@ -25,6 +25,7 @@
 #include "GameClient/Display.h"
 #include "Common/FileSystem.h"
 #include "Common/file.h"
+#include "Common/GXSettingsPath.h"
 
 #include <cmath>
 #include <cstdio>
@@ -220,8 +221,14 @@ Real Transform::mapY( Real y ) const
 Real userScale()
 {
 	static Real s_scale = -1.0f;
-	if( s_scale < 0.0f )
+	static Int s_loadedGeneration = -1;
+	if( s_scale < 0.0f || s_loadedGeneration != GXSettingsGeneration() )
 	{
+		// A new game session from the iOS launcher may ask for another size: the layouts' cached
+		// transforms were made for the old one.
+		if( s_loadedGeneration >= 0 )
+			s_transforms.clear();
+		s_loadedGeneration = GXSettingsGeneration();
 		s_scale = 1.0f;
 		const char *env = getenv( "GX_UI_SCALE" );
 		if( env )

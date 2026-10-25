@@ -53,6 +53,8 @@
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/DisconnectMenu.h"
 #include "GameLogic/ScriptEngine.h"
+#include "GameClient/GXWindowLook.h"
+#include "Common/GXSettingsPath.h"
 
 
 
@@ -78,6 +80,7 @@ static NameKeyType buttonRestart = NAMEKEY_INVALID;
 static NameKeyType buttonReturn = NAMEKEY_INVALID;
 static NameKeyType buttonOptions = NAMEKEY_INVALID;
 static NameKeyType buttonSaveLoad = NAMEKEY_INVALID;
+static NameKeyType buttonQuitToLauncher = NAMEKEY_INVALID;
 
 static void initGadgetsFullQuit()
 {
@@ -151,6 +154,59 @@ static void quitToDesktopQuitMenu()
 	TheGameLogic->quit(TRUE);
   // destroy the quit menu
 	destroyQuitMenu();
+}
+
+// GeneralsX @feature iOS port 25/10/2026 "Quit to Launcher" in the pause menu, when the iOS launcher
+// is there to go back to (GXSettingsPath.h, GXLauncherHook): it ends the match as Exit does, and the
+// launcher is shown once the game is back at the menus. Made here rather than in a copy of EA's
+// QuitMenu.wnd: it takes the place of Return, which moves one row down, and the panel grows by that
+// row. Once per layout -- the layouts are kept until the match ends.
+static void quitToLauncherQuitMenu()
+{
+	GXLauncherRequested() = true;
+	exitQuitMenu();
+}
+
+static void gxAddQuitToLauncherButton( const char *layout )
+{
+	buttonQuitToLauncher = NAMEKEY_INVALID;
+	if( GXLauncherHook() == nullptr )
+		return;
+	AsciiString name;
+	name.format( "%s:ButtonQuitToLauncher", layout );
+	const NameKeyType id = TheNameKeyGenerator->nameToKey( name );
+	buttonQuitToLauncher = id;
+	if( TheWindowManager->winGetWindowFromId( nullptr, id ) )
+		return;
+	name.format( "%s:ButtonExit", layout );
+	GameWindow *exitWin = TheWindowManager->winGetWindowFromId( nullptr, TheNameKeyGenerator->nameToKey( name ) );
+	name.format( "%s:ButtonReturn", layout );
+	GameWindow *returnWin = TheWindowManager->winGetWindowFromId( nullptr, TheNameKeyGenerator->nameToKey( name ) );
+	if( exitWin == nullptr || returnWin == nullptr || returnWin->winGetParent() == nullptr )
+		return;
+	GameWindow *parent = returnWin->winGetParent();
+	Int exitX, exitY, x, y, width, height;
+	exitWin->winGetPosition( &exitX, &exitY );
+	returnWin->winGetPosition( &x, &y );
+	returnWin->winGetSize( &width, &height );
+	const Int pitch = y - exitY;
+	if( pitch <= 0 )
+		return;
+	WinInstanceData inst;
+	inst.init();
+	inst.m_style = GWS_PUSH_BUTTON | GWS_MOUSE_TRACK;
+	inst.m_textLabelString = "QUIT TO LAUNCHER";
+	GameWindow *button = TheWindowManager->gogoGadgetPushButton( parent, WIN_STATUS_ENABLED,
+		x, y, width, height, &inst, returnWin->winGetInstanceData()->getFont(), FALSE );
+	if( button == nullptr )
+		return;
+	button->winSetWindowId( id );
+	GXWindowLook::copy( button, exitWin, TRUE );
+	GadgetButtonSetText( button, UnicodeString( L"QUIT TO LAUNCHER" ) );
+	returnWin->winSetPosition( x, y + pitch );
+	Int parentWidth, parentHeight;
+	parent->winGetSize( &parentWidth, &parentHeight );
+	parent->winSetSize( parentWidth, parentHeight + pitch );
 }
 
 static void surrenderQuitMenu()
@@ -343,6 +399,7 @@ void ToggleQuitMenu()
 				noSaveLoadQuitMenuLayout = TheWindowManager->winCreateLayout( "Menus/QuitNoSave.wnd" );
 			quitMenuLayout = noSaveLoadQuitMenuLayout;
 			initGadgetsNoSaveQuit();
+			gxAddQuitToLauncherButton( "QuitNoSave.wnd" );
 			TheTransitionHandler->remove("QuitNoSave");
 			TheTransitionHandler->setGroup("QuitNoSave");
 		}
@@ -352,6 +409,7 @@ void ToggleQuitMenu()
 				fullQuitMenuLayout= TheWindowManager->winCreateLayout( "Menus/QuitMenu.wnd" );
 			quitMenuLayout = fullQuitMenuLayout;
 			initGadgetsFullQuit();
+			gxAddQuitToLauncherButton( "QuitMenu.wnd" );
 			TheTransitionHandler->remove("QuitFull");
 			TheTransitionHandler->setGroup("QuitFull");
 		}
@@ -488,6 +546,12 @@ WindowMsgHandledType QuitMenuSystem( GameWindow *window, UnsignedInt msg,
 			else if( controlID == buttonExit )
 			{
         quitConfirmationWindow = QuitMessageBoxYesNo(TheGameText->fetch("GUI:QuitPopupTitle"), TheGameText->fetch("GUI:QuitPopupMessage"),/*quitCallback*/exitQuitMenu,noExitQuitMenu);
+			}
+			else if( buttonQuitToLauncher != NAMEKEY_INVALID && controlID == buttonQuitToLauncher )
+			{
+				quitConfirmationWindow = QuitMessageBoxYesNo( UnicodeString( L"QUIT TO LAUNCHER" ),
+					UnicodeString( L"Leave this game and go back to the launcher? Anything not saved is lost." ),
+					/*quitCallback*/quitToLauncherQuitMenu, noExitQuitMenu );
 			}
 			else if( controlID == buttonReturn )
 			{

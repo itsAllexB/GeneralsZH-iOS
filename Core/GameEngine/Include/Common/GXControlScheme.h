@@ -53,9 +53,11 @@ namespace GXControlScheme
 	{
 		static int s_state[OPTION_COUNT];
 		static bool s_loaded = false;
-		if (!s_loaded)
+		static int s_loadedGeneration = -1;
+		if (!s_loaded || s_loadedGeneration != GXSettingsGeneration())
 		{
 			s_loaded = true;
+			s_loadedGeneration = GXSettingsGeneration();
 			for (int i = 0; i < OPTION_COUNT; ++i)
 				s_state[i] = 0;
 #if GX_HAS_SETTINGS_DIR

@@ -42,6 +42,33 @@
 #define GX_HAS_SETTINGS_DIR 0
 #endif
 
+// GeneralsX @feature iOS port 25/10/2026 Bumped each time the iOS launcher has been shown again over
+// the running game: readers that cache a settings file read it again when the generation they
+// loaded at is no longer current. Always 0 elsewhere.
+inline int &GXSettingsGeneration()
+{
+	static int generation = 0;
+	return generation;
+}
+
+// GeneralsX @feature iOS port 25/10/2026 Back to the launcher. iOS apps do not quit themselves, so on
+// iOS Exit Game (main menu) and Quit to Launcher (pause menu) ask for the launcher instead
+// (GXLauncherRequested); SDL3GameEngine::update shows it once the game is back at the menus, through
+// the hook SDL3Main installs. The engine keeps running underneath -- it was never written to start
+// twice in one process. No hook (other platforms): the menus quit as they always did.
+typedef void (*GXLauncherHookFn)();
+inline GXLauncherHookFn &GXLauncherHook()
+{
+	static GXLauncherHookFn hook = nullptr;
+	return hook;
+}
+
+inline bool &GXLauncherRequested()
+{
+	static bool requested = false;
+	return requested;
+}
+
 // Writes the full path of the launcher settings file `name` into out. False when there is no
 // settings directory (other platforms, or iOS started without the launcher).
 inline bool GXSettingsFilePath(const char *name, char *out, size_t size)

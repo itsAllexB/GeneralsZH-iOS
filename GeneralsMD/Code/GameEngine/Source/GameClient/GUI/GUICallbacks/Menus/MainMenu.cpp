@@ -34,6 +34,7 @@
 #include "gamespy/ghttp/ghttp.h"
 
 #include "Lib/BaseType.h"
+#include "Common/GXSettingsPath.h"
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
@@ -281,6 +282,13 @@ static void showSelectiveButtons( Int show )
 
 static void quitCallback()
 {
+	// GeneralsX @feature iOS port 25/10/2026 On iOS Exit Game goes back to the launcher, over the
+	// running game, and the menu stays (GXSettingsPath.h, GXLauncherHook).
+	if (GXLauncherHook() != nullptr)
+	{
+		GXLauncherRequested() = true;
+		return;
+	}
 	buttonPushed = TRUE;
 	TheScriptEngine->signalUIInteract(TheShellHookNames[SHELL_SCRIPT_HOOK_MAIN_MENU_EXIT_SELECTED]);
 	TheShell->pop();

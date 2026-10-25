@@ -476,6 +476,31 @@ GameEngine *CreateGameEngine(void)
  * @param argv Command line arguments
  * @return Exit code (0 = success)
  */
+#if defined(GX_HAS_IOS_LAUNCHER)
+// GeneralsX @feature iOS port 25/10/2026 The launcher again, over the running game (GXSettingsPath.h,
+// GXLauncherHook). It writes the settings files and sets the environment as at startup; the readers
+// that cached them read them again. The data folder cannot change under a running engine: when the
+// player picked another one, the app ends, and the next start uses it.
+static void gxShowLauncherAgain()
+{
+	const char *dataDir = getenv("GX_GAME_DATA_DIR");
+	const std::string previousDataDir = dataDir != nullptr ? dataDir : "";
+	// Only set when not 100: a size put back to 100 must not keep the old value.
+	unsetenv("GX_UI_SCALE");
+	fprintf(stderr, "INFO: showing the launcher over the game\n");
+	gx_launcher_run();
+	++GXSettingsGeneration();
+	dataDir = getenv("GX_GAME_DATA_DIR");
+	if (previousDataDir != (dataDir != nullptr ? dataDir : "")) {
+		fprintf(stderr, "INFO: game folder changed to %s -- ending the app, the next start uses it\n",
+		        dataDir != nullptr ? dataDir : "(none)");
+		fflush(stderr);
+		_exit(0);
+	}
+	fprintf(stderr, "INFO: back from the launcher\n");
+}
+#endif
+
 int main(int argc, char* argv[])
 {
 	int exitcode = 1;
@@ -493,6 +518,7 @@ int main(int argc, char* argv[])
 	// first so "Collect logs" (logging_off) already applies to the stderr mirror below. Its extra
 	// arguments (-gxSafeInsets, -nologo) are appended to the command line.
 	{
+		GXLauncherHook() = gxShowLauncherAgain;
 		const char *const *extra = gx_launcher_run();
 		static std::vector<char *> s_launcherArgv;
 		s_launcherArgv.assign(argv, argv + argc);

@@ -38,8 +38,10 @@ inline bool GXLoggingDisabled()
 {
 #if GX_HAS_SETTINGS_DIR
 	static int state = -1;
-	if (state < 0)
+	static int loadedGeneration = -1;
+	if (state < 0 || loadedGeneration != GXSettingsGeneration())
 	{
+		loadedGeneration = GXSettingsGeneration();
 		char path[256];
 		if (!GXSettingsFilePath("logging_off", path, sizeof(path)))
 			path[0] = '\0';

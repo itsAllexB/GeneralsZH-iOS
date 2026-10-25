@@ -41,8 +41,10 @@ inline int GXMouseCursorPercent()
 {
 #if GX_HAS_SETTINGS_DIR
 	static int percent = -1;
-	if (percent < 0)
+	static int loadedGeneration = -1;
+	if (percent < 0 || loadedGeneration != GXSettingsGeneration())
 	{
+		loadedGeneration = GXSettingsGeneration();
 		percent = 100;
 		char path[256];
 		if (!GXSettingsFilePath("mouse_mode", path, sizeof(path)))
@@ -66,8 +68,10 @@ inline bool GXMouseModeEnabled()
 {
 #if GX_HAS_SETTINGS_DIR
 	static int state = -1;
-	if (state < 0)
+	static int loadedGeneration = -1;
+	if (state < 0 || loadedGeneration != GXSettingsGeneration())
 	{
+		loadedGeneration = GXSettingsGeneration();
 		char path[256];
 		if (!GXSettingsFilePath("mouse_mode", path, sizeof(path)))
 			path[0] = '\0';

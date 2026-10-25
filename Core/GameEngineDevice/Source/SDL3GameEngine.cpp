@@ -32,6 +32,7 @@
 #include "OpenALAudioDevice/OpenALAudioManager.h"
 #include "SDL3Device/GameClient/SDL3Mouse.h"
 #include "SDL3Device/GameClient/SDL3Keyboard.h"
+#include "Common/GXSettingsPath.h"
 #include "Common/MessageStream.h"
 #include "GameClient/Mouse.h"
 #include "GameClient/Keyboard.h"
@@ -2747,7 +2748,34 @@ void SDL3GameEngine::update(void)
 		d3d8gles_SetPresentUncapped(uncapped);
 	}
 #endif
+	// GeneralsX @feature iOS port 25/10/2026 Development: GX_AUTO_EXIT_SECONDS=n leaves the game n
+	// seconds after each start or return from the launcher (as Exit Game would), so that with the
+	// launcher's GX_LAUNCHER_SKIP=1 the way back to the launcher runs over and over unattended.
+	{
+		static int s_session = -1;
+		static Uint64 s_exitAt = 0;
+		if (s_session != GXSettingsGeneration()) {
+			s_session = GXSettingsGeneration();
+			const char *seconds = getenv("GX_AUTO_EXIT_SECONDS");
+			s_exitAt = (seconds != nullptr && atoi(seconds) > 0) ? SDL_GetTicks() + (Uint64)atoi(seconds) * 1000 : 0;
+		}
+		if (s_exitAt != 0 && SDL_GetTicks() >= s_exitAt) {
+			s_exitAt = 0;
+			fprintf(stderr, "INFO: GX_AUTO_EXIT_SECONDS reached, leaving the game\n");
+			if (GXLauncherHook() != nullptr)
+				GXLauncherRequested() = true;
+			else
+				setQuitting(TRUE);
+		}
+	}
 	GameEngine::update();
+	// GeneralsX @feature iOS port 25/10/2026 Back to the launcher (GXSettingsPath.h) once the game is
+	// at the menus: right away from the main menu, after the exit from a match has finished.
+	if (GXLauncherRequested() && GXLauncherHook() != nullptr && TheGameLogic != nullptr
+	    && (!TheGameLogic->isInGame() || TheGameLogic->isInShellGame()) && !TheGameLogic->isLoadingMap()) {
+		GXLauncherRequested() = false;
+		GXLauncherHook()();
+	}
 }
 
 /**

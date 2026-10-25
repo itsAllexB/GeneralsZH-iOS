@@ -50,9 +50,13 @@ namespace GXManagedMods
 	{
 		static std::vector<std::string> s_folders;
 		static bool s_loaded = false;
-		if (!s_loaded)
+		static int s_loadedGeneration = -1;
+		if (!s_loaded || s_loadedGeneration != GXSettingsGeneration())
 		{
 			s_loaded = true;
+			s_loadedGeneration = GXSettingsGeneration();
+			s_folders.clear();
+			profileNameStorage().clear();
 #if GX_HAS_SETTINGS_DIR
 			char path[256];
 			if (!GXSettingsFilePath("mods_active.txt", path, sizeof(path)))

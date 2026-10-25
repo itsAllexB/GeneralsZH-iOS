@@ -59,6 +59,11 @@ kept in [`README.android.md`](README.android.md).
   sharing it leaves the system document picker stuck on an empty Recents page in
   re-signed apps on iOS 27.2.
 - **Apple Pencil** no longer also produces mouse events.
+- **60 Hz simulation** (the Android port's "60 fps" option, built in): the game updates and
+  draws 60 times a second at normal speed instead of 30. It is the rate of the Windows
+  GeneralsOnline client; replays recorded by the original 30 Hz game do not play back on it.
+- **Back to the launcher**: Exit Game in the main menu, or **Quit to Launcher** in the
+  pause menu, returns to the launcher instead of closing the app.
 - **Native launcher** (see below), and the system allocator instead of the game's memory
   pool, which is not thread-safe and crashed Apple's text rendering inside the process.
 - **iOS Simulator build** (optional, `cmake/triplets/arm64-ios-simulator.cmake`):
