@@ -45,17 +45,6 @@
         }
       }
     },
-    "%@ of %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ of %@"
-          }
-        }
-      }
-    },
     "%d archives, %@": {
       "extractionState": "manual",
       "localizations": {
@@ -63,6 +52,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d archives, %@"
+          }
+        }
+      }
+    },
+    "%d fps": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d fps"
           }
         }
       }
@@ -166,13 +166,13 @@
         }
       }
     },
-    "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game.": {
+    "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect when you tap Play.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game."
+            "value": "Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect when you tap Play."
           }
         }
       }
@@ -184,6 +184,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Additional terms (GPL section 7): no trademark or publicity rights are granted. This license does not give you any right, title or interest in \"Command & Conquer\" or any other Electronic Arts trademark, and this program claims no affiliation with Electronic Arts Inc. Modified versions must be marked as such and not identified as the original program. The program is provided \"as is\", with all faults and without warranty of any kind; your use is at your sole risk."
+          }
+        }
+      }
+    },
+    "Allow higher camera": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow higher camera"
           }
         }
       }
@@ -210,13 +221,13 @@
         }
       }
     },
-    "As in the original game: a move order just moves, the camera zooms out to the usual height, the army column opens with the control groups only.": {
+    "As in the original game: a move order just moves, the army column opens with the control groups only, and tapping the minimap with units selected sends them there.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "As in the original game: a move order just moves, the camera zooms out to the usual height, the army column opens with the control groups only."
+            "value": "As in the original game: a move order just moves, the army column opens with the control groups only, and tapping the minimap with units selected sends them there."
           }
         }
       }
@@ -254,17 +265,6 @@
         }
       }
     },
-    "Bundled with the app (developer build)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bundled with the app (developer build)"
-          }
-        }
-      }
-    },
     "Cancel": {
       "extractionState": "manual",
       "localizations": {
@@ -272,17 +272,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancel"
-          }
-        }
-      }
-    },
-    "Cancel copying": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel copying"
           }
         }
       }
@@ -353,17 +342,6 @@
         }
       }
     },
-    "Chosen game folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chosen game folder"
-          }
-        }
-      }
-    },
     "Classic": {
       "extractionState": "manual",
       "localizations": {
@@ -408,13 +386,13 @@
         }
       }
     },
-    "Combat units attack on the move, the army column opens with the army buttons too, and the camera zooms out up to four times higher.": {
+    "Combat units attack on the move, the army column opens with the army buttons too, and the minimap moves the camera.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Combat units attack on the move, the army column opens with the army buttons too, and the camera zooms out up to four times higher."
+            "value": "Combat units attack on the move, the army column opens with the army buttons too, and the minimap moves the camera."
           }
         }
       }
@@ -426,72 +404,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Control scheme"
-          }
-        }
-      }
-    },
-    "Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above."
-          }
-        }
-      }
-    },
-    "Copy a game folder into the app…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy a game folder into the app…"
-          }
-        }
-      }
-    },
-    "Copy inside the app": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy inside the app"
-          }
-        }
-      }
-    },
-    "Copy into the app instead": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy into the app instead"
-          }
-        }
-      }
-    },
-    "Copying %@ failed.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copying %@ failed."
-          }
-        }
-      }
-    },
-    "Copying game data…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copying game data…"
           }
         }
       }
@@ -540,24 +452,13 @@
         }
       }
     },
-    "Delete copy": {
+    "Device name": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete copy"
-          }
-        }
-      }
-    },
-    "Delete the copy inside the app?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete the copy inside the app?"
+            "value": "Device name"
           }
         }
       }
@@ -672,6 +573,17 @@
         }
       }
     },
+    "Frame Rate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frame Rate"
+          }
+        }
+      }
+    },
     "From a computer: connect the iPhone, open it in Finder (or the Apple Devices app on Windows), and drag the game folder onto %@ in its Files tab. The launcher finds it there on its own.": {
       "extractionState": "manual",
       "localizations": {
@@ -690,17 +602,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "GNU General Public License v3"
-          }
-        }
-      }
-    },
-    "Game data": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Game data"
           }
         }
       }
@@ -760,17 +661,6 @@
         }
       }
     },
-    "Higher camera": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Higher camera"
-          }
-        }
-      }
-    },
     "Home": {
       "extractionState": "manual",
       "localizations": {
@@ -789,17 +679,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "How to play"
-          }
-        }
-      }
-    },
-    "Import cancelled.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import cancelled."
           }
         }
       }
@@ -892,6 +771,17 @@
         }
       }
     },
+    "Minimap moves camera": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimap moves camera"
+          }
+        }
+      }
+    },
     "More": {
       "extractionState": "manual",
       "localizations": {
@@ -965,17 +855,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not a game folder"
-          }
-        }
-      }
-    },
-    "Not enough free space: %@ needed, %@ available.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not enough free space: %@ needed, %@ available."
           }
         }
       }
@@ -1079,13 +958,13 @@
         }
       }
     },
-    "Playing from": {
+    "Player Name": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Playing from"
+            "value": "Player Name"
           }
         }
       }
@@ -1123,17 +1002,6 @@
         }
       }
     },
-    "Replace with another folder…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Replace with another folder…"
-          }
-        }
-      }
-    },
     "Reset to 100%": {
       "extractionState": "manual",
       "localizations": {
@@ -1156,13 +1024,13 @@
         }
       }
     },
-    "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time you launch the game.": {
+    "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time the app starts.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time you launch the game."
+            "value": "Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time the app starts."
           }
         }
       }
@@ -1277,13 +1145,24 @@
         }
       }
     },
-    "Takes effect the next time the game starts. Works in skirmish, the campaign and online games alike: only how your orders are given changes, not the game's rules.": {
+    "Takes effect when you tap Play. Works in skirmish, the campaign and LAN games alike: only how your orders are given changes, not the game's rules.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Takes effect the next time the game starts. Works in skirmish, the campaign and online games alike: only how your orders are given changes, not the game's rules."
+            "value": "Takes effect when you tap Play. Works in skirmish, the campaign and LAN games alike: only how your orders are given changes, not the game's rules."
+          }
+        }
+      }
+    },
+    "Tapping the minimap jumps the camera there even with units selected, and dragging on the minimap moves the camera with your finger. An armed ability or attack-move still targets through the minimap.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tapping the minimap jumps the camera there even with units selected, and dragging on the minimap moves the camera with your finger. An armed ability or attack-move still targets through the minimap."
           }
         }
       }
@@ -1387,13 +1266,24 @@
         }
       }
     },
-    "The game may fail to start or show missing textures. See Home > Game data for details.": {
+    "The game itself always runs at 60 updates a second. 120 makes scrolling and animation smoother on ProMotion screens and uses more battery.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The game may fail to start or show missing textures. See Home > Game data for details."
+            "value": "The game itself always runs at 60 updates a second. 120 makes scrolling and animation smoother on ProMotion screens and uses more battery."
+          }
+        }
+      }
+    },
+    "The game may fail to start or show missing textures. See Home > Game folder for details.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game may fail to start or show missing textures. See Home > Game folder for details."
           }
         }
       }
@@ -1416,28 +1306,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The game's log from the last session and the one before it. Share it with a bug report."
-          }
-        }
-      }
-    },
-    "The selected folder could not be read.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The selected folder could not be read."
-          }
-        }
-      }
-    },
-    "The selected folder does not contain INIZH.big or INI.big. Pick the folder the game is installed in.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The selected folder does not contain INIZH.big or INI.big. Pick the folder the game is installed in."
           }
         }
       }
@@ -1519,24 +1387,24 @@
         }
       }
     },
-    "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect the next time the game starts.": {
+    "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect when you tap Play.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect the next time the game starts."
+            "value": "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect when you tap Play."
           }
         }
       }
     },
-    "Try again…": {
+    "Using the game data bundled with this developer build": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try again…"
+            "value": "Using the game data bundled with this developer build"
           }
         }
       }
@@ -1618,13 +1486,13 @@
         }
       }
     },
-    "Your game folder in Files is not touched. You can copy a folder again at any time.": {
+    "Your name in skirmish and LAN games. Up to 12 characters; empty uses the device name.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your game folder in Files is not touched. You can copy a folder again at any time."
+            "value": "Your name in skirmish and LAN games. Up to 12 characters; empty uses the device name."
           }
         }
       }

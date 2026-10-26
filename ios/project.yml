@@ -32,8 +32,8 @@ targets:
       path: Stub/Info.plist
       properties:
         CFBundleDisplayName: Generals ZH
-        CFBundleShortVersionString: "1.04"
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
         UIFileSharingEnabled: true
         # No LSSupportsOpeningDocumentsInPlace: combined with file sharing it leaves
         # re-signed apps' document picker stuck on an empty Recents page (iOS 27.2).
@@ -53,7 +53,9 @@ targets:
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchStoryboardName: ""
         # All orientations: the iPhone Duo's inner display ignores a landscape-only
-        # lock and lays the app out portrait even when held landscape.
+        # lock and lays the app out portrait even when held landscape. Every other
+        # device is limited to landscape at run time (LauncherRunner: the launcher's
+        # window, and SDL_IOS_ORIENTATIONS for the game's).
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight

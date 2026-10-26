@@ -16,7 +16,7 @@
 **	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// GeneralsX @feature iOS launcher 25/10/2026 Arguments, environment, the importer and the log reader.
+// GeneralsX @feature iOS launcher 25/10/2026 Arguments, environment, frame rate and the log reader.
 
 import XCTest
 @testable import GXLauncherCore
@@ -57,7 +57,7 @@ final class LaunchPlanTests: XCTestCase {
 
         // Nothing on disk: GX_SETTINGS_DIR and the audio category (sound in silent mode is ON).
         var plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(plan.environment.map(\.name), ["GX_SETTINGS_DIR", "SDL_AUDIO_CATEGORY"])
+        XCTAssertEqual(plan.environment.map(\.name), ["GX_SETTINGS_DIR", "SDL_AUDIO_CATEGORY", "GX_FPS_LIMIT"])
         XCTAssertEqual(plan.value(of: "GX_SETTINGS_DIR"), paths.settingsDir.path)
         XCTAssertEqual(plan.value(of: "SDL_AUDIO_CATEGORY"), "playback")
 
@@ -71,7 +71,8 @@ final class LaunchPlanTests: XCTestCase {
                                       safeInsets: nil)
         XCTAssertEqual(plan.arguments, ["-nologo"])
         XCTAssertEqual(plan.environment.map(\.name),
-                       ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE", "GX_TRACE", "GX_TOUCH_DEBUG", "SDL_AUDIO_CATEGORY"])
+                       ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE", "GX_TRACE", "GX_TOUCH_DEBUG",
+                        "SDL_AUDIO_CATEGORY", "GX_FPS_LIMIT"])
         XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.bundledGameData.path)
         XCTAssertEqual(plan.value(of: "GX_UI_SCALE"), "140")
         XCTAssertEqual(plan.value(of: "GX_TRACE"), "1")
@@ -79,10 +80,7 @@ final class LaunchPlanTests: XCTestCase {
         XCTAssertNil(plan.value(of: "GENERALSX_BUNDLED_FONTS_DIR"))
         XCTAssertNil(plan.value(of: "DXVK_CONFIG_FILE"))
 
-        // The imported copy beats the bundle; a chosen folder beats both.
-        try BigWriter.makeGameFolder(at: paths.importedGameData)
-        plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), paths.importedGameData.path)
+        // A chosen folder beats the bundle.
         let external = home.root.appendingPathComponent("Files/Zero Hour")
         plan = LaunchPlanBuilder.plan(paths: paths, preferences: LauncherPreferences(), safeInsets: nil, externalFolder: external)
         XCTAssertEqual(plan.value(of: "GX_GAME_DATA_DIR"), external.path)
@@ -118,12 +116,43 @@ final class LaunchPlanTests: XCTestCase {
         XCTAssertNil(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil))
         try BigWriter.makeGameFolder(at: paths.bundledGameData)
         XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil), .bundled(paths.bundledGameData))
-        try BigWriter.makeGameFolder(at: paths.importedGameData)
-        XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: nil), .imported(paths.importedGameData))
         XCTAssertEqual(LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: external), .external(external))
         XCTAssertFalse(GameDataSource.bundled(paths.bundledGameData).takesSupportFiles)
-        XCTAssertTrue(GameDataSource.imported(paths.importedGameData).takesSupportFiles)
         XCTAssertTrue(GameDataSource.external(external).takesSupportFiles)
+    }
+
+    func testFrameRateExportAndFallback() throws {
+        let home = try TempHome()
+        func fps(_ saved: Int, screen: Int) -> String? {
+            LaunchPlanBuilder.plan(paths: home.paths, preferences: LauncherPreferences(frameRate: saved), safeInsets: nil,
+                                   maximumFramesPerSecond: screen).value(of: "GX_FPS_LIMIT")
+        }
+        XCTAssertEqual(fps(60, screen: 60), "60")
+        XCTAssertEqual(fps(60, screen: 120), "60")
+        XCTAssertEqual(fps(120, screen: 120), "120")
+        XCTAssertEqual(fps(120, screen: 60), "60", "120 saved but the screen cannot show it")
+        XCTAssertEqual(fps(30, screen: 120), "60", "30 is no longer offered")
+        XCTAssertEqual(fps(7, screen: 120), "60")
+        XCTAssertEqual(LaunchPlanBuilder.plan(paths: home.paths, preferences: LauncherPreferences(), safeInsets: nil)
+            .value(of: "GX_FPS_LIMIT"), "60", "always exported, 60 by default")
+        XCTAssertEqual(FrameRate.choices(maximumFramesPerSecond: 60), [60])
+        XCTAssertEqual(FrameRate.choices(maximumFramesPerSecond: 120), [60, 120])
+        XCTAssertEqual(FrameRate.choices(maximumFramesPerSecond: 0), [60])
+    }
+
+    func testApplyUnsetsWhatAnEarlierRunSet() {
+        // gx_launcher_run() can run again over the running game: a switch turned off must go.
+        setenv("GX_LAUNCHER_TEST_KEEP", "scheme", 1)  // set by someone else: never touched
+        LaunchPlanBuilder.apply(LaunchPlan(arguments: [], environment: [("GX_LAUNCHER_TEST_A", "1"), ("GX_LAUNCHER_TEST_B", "70")]))
+        XCTAssertEqual(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_A"], "1")
+        let unset = LaunchPlanBuilder.apply(LaunchPlan(arguments: [], environment: [("GX_LAUNCHER_TEST_B", "80")]))
+        XCTAssertEqual(unset, ["GX_LAUNCHER_TEST_A"])
+        XCTAssertNil(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_A"], "dropped from the plan -> unset")
+        XCTAssertEqual(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_B"], "80")
+        XCTAssertEqual(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_KEEP"], "scheme")
+        LaunchPlanBuilder.apply(LaunchPlan(arguments: [], environment: []))
+        XCTAssertNil(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_B"])
+        unsetenv("GX_LAUNCHER_TEST_KEEP")
     }
 
     func testApplySetsEnvironment() {
@@ -131,50 +160,6 @@ final class LaunchPlanTests: XCTestCase {
         LaunchPlanBuilder.apply(plan)
         XCTAssertEqual(ProcessInfo.processInfo.environment["GX_LAUNCHER_TEST_VAR"], "abc")
         unsetenv("GX_LAUNCHER_TEST_VAR")
-    }
-
-    func testImporterCopiesValidatesAndAddsRuntimeFiles() throws {
-        let home = try TempHome()
-        let source = home.root.appendingPathComponent("Picked/Zero Hour", isDirectory: true)
-        try BigWriter.makeGameFolder(at: source)
-        try FileManager.default.removeItem(at: source.appendingPathComponent("DefaultOptions.ini"))
-        try Data().write(to: source.appendingPathComponent("._INIZH.big"))  // macOS metadata, skipped
-        // The bundle provides the port's runtime files.
-        try FileManager.default.createDirectory(at: home.paths.bundledGameData.appendingPathComponent("fonts"),
-                                                withIntermediateDirectories: true)
-        try Data("defaults".utf8).write(to: home.paths.bundledGameData.appendingPathComponent("DefaultOptions.ini"))
-        try Data("font".utf8).write(to: home.paths.bundledGameData.appendingPathComponent("fonts/a.ttf"))
-
-        let updates = UpdateCounter()
-        let report = try GameDataImporter.importFolder(from: source, paths: home.paths) { progress in
-            XCTAssertLessThanOrEqual(progress.copiedBytes, progress.totalBytes)
-            updates.increment()
-        }
-        XCTAssertTrue(report.isOK, "\(report.issues)")
-        XCTAssertGreaterThan(updates.value, 0)
-        let fm = FileManager.default
-        XCTAssertTrue(fm.fileExists(atPath: home.paths.importedGameData.appendingPathComponent("ZH_Generals/INI.big").path))
-        XCTAssertFalse(fm.fileExists(atPath: home.paths.importedGameData.appendingPathComponent("._INIZH.big").path))
-        XCTAssertTrue(fm.fileExists(atPath: home.paths.importedGameData.appendingPathComponent("DefaultOptions.ini").path))
-        XCTAssertTrue(fm.fileExists(atPath: home.paths.importedGameData.appendingPathComponent("fonts/a.ttf").path))
-        XCTAssertFalse(fm.fileExists(atPath: home.paths.importStaging.path))
-        XCTAssertEqual(try Data(contentsOf: home.paths.importedGameData.appendingPathComponent("INIZH.big")),
-                       try Data(contentsOf: source.appendingPathComponent("INIZH.big")))
-
-        try GameDataImporter.removeImported(paths: home.paths)
-        XCTAssertFalse(fm.fileExists(atPath: home.paths.importedGameData.path))
-    }
-
-    func testImporterRejectsNonGameFolder() throws {
-        let home = try TempHome()
-        let source = home.root.appendingPathComponent("Photos", isDirectory: true)
-        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
-        try Data("jpeg".utf8).write(to: source.appendingPathComponent("a.jpg"))
-        XCTAssertThrowsError(try GameDataImporter.importFolder(from: source, paths: home.paths) { _ in }) { error in
-            XCTAssertEqual(error as? ImportError, .notAGameFolder)
-        }
-        XCTAssertFalse(FileManager.default.fileExists(atPath: home.paths.importedGameData.path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: home.paths.importStaging.path))
     }
 
     func testLogReaderHeadAndTail() throws {
@@ -199,11 +184,4 @@ final class LaunchPlanTests: XCTestCase {
         LogReader.clear(paths: home.paths)
         XCTAssertNil(LogReader.read(home.paths.currentLog).fileSize)
     }
-}
-
-final class UpdateCounter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-    func increment() { lock.lock(); count += 1; lock.unlock() }
-    var value: Int { lock.lock(); defer { lock.unlock() }; return count }
 }

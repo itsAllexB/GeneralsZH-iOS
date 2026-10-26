@@ -32,6 +32,7 @@
 #include "OpenALAudioDevice/OpenALAudioManager.h"
 #include "SDL3Device/GameClient/SDL3Mouse.h"
 #include "SDL3Device/GameClient/SDL3Keyboard.h"
+#include "Common/GXControlScheme.h"
 #include "Common/GXSettingsPath.h"
 #include "Common/MessageStream.h"
 #include "GameClient/Mouse.h"
@@ -350,12 +351,17 @@ struct TouchState {
 		LIST_SCROLL, // finger1 landed on a list box and dragged past the dead zone -- the list
 		             // follows the finger (GadgetListBoxTouchScroll*), nothing is sent to the
 		             // window manager, and the release selects nothing.
-		UI_PRESS     // finger1 landed directly on a GameWindow (button, panel, etc.) --
+		UI_PRESS,    // finger1 landed directly on a GameWindow (button, panel, etc.) --
 		             // LEFT_BUTTON_DOWN already sent immediately at touch-down, motion is
 		             // ignored entirely (frozen at the anchor) until release/cancel sends
 		             // LEFT_BUTTON_UP at that same anchor point. See the FINGER_DOWN
 		             // @bugfix comment below for why UI touches skip the PENDING
 		             // classification battlefield touches go through.
+		MINIMAP_DRAG // finger1 landed on the minimap with "Minimap moves camera" on (control
+		             // scheme) and nothing armed: the camera went there at touch-down and
+		             // follows the finger while it slides; nothing is sent to the window
+		             // manager, so neither the tap nor the drag becomes an order.
+		             // (GeneralsX @feature iOS port 26/10/2026)
 	};
 
 	Phase phase = IDLE;
@@ -1434,6 +1440,20 @@ void handleTouchEvent(SDL_Window *window, const SDL_Event &event)
 	switch (event.type) {
 	case SDL_EVENT_FINGER_DOWN:
 		if (s_touch.phase == TouchState::IDLE || s_touch.phase == TouchState::MOMENTUM) {
+			// GeneralsX @feature iOS port 26/10/2026 Minimap moves camera: the camera jumps to the
+			// touched point and follows the finger across the minimap. A minimap touch otherwise
+			// took the battlefield's path below (it is no push button), so a slide panned the
+			// main view instead. An armed command still targets through the minimap as before.
+			if (GXControlScheme::enabled(GXControlScheme::MINIMAP_CAMERA)
+			    && (TheInGameUI == nullptr || TheInGameUI->getGUICommand() == nullptr)
+			    && TouchInput::lookAtRadarPoint((Int)px, (Int)py)) {
+				s_touch.finger1 = event.tfinger.fingerID;
+				s_touch.phase = TouchState::MINIMAP_DRAG;
+				s_touch.downX = s_touch.lastX = px;
+				s_touch.downY = s_touch.lastY = py;
+				s_touch.downTicks = SDL_GetTicks();
+				break;
+			}
 			// GeneralsX @bugfix Android port 03/08/2026 A finger landing
 			// directly on a GUI window (button, panel, etc.) skips the whole
 			// PENDING classification below and gets a REAL, immediate
@@ -1749,6 +1769,12 @@ void handleTouchEvent(SDL_Window *window, const SDL_Event &event)
 					recordPanSample(px, py, event.tfinger.timestamp);
 				}
 			}
+		}
+		else if (s_touch.phase == TouchState::MINIMAP_DRAG && event.tfinger.fingerID == s_touch.finger1) {
+			// Off the minimap's map area the camera stays where the finger left it.
+			TouchInput::lookAtRadarPoint((Int)px, (Int)py);
+			s_touch.lastX = px;
+			s_touch.lastY = py;
 		}
 		else if (s_touch.phase == TouchState::LIST_SCROLL && event.tfinger.fingerID == s_touch.finger1) {
 			if (listBoxAt(s_touch.downX, s_touch.downY) == s_touch.listBox) {
@@ -2164,6 +2190,9 @@ void handleTouchEvent(SDL_Window *window, const SDL_Event &event)
 					GadgetListBoxTouchScrollEnd();
 					s_touch.listBox = nullptr;
 					break;
+				case TouchState::MINIMAP_DRAG:
+					// The camera already followed the finger; the release sends nothing.
+					break;
 				case TouchState::UI_PRESS:
 				{
 					// GeneralsX @bugfix Android port 03/08/2026 Release at the
@@ -2270,6 +2299,7 @@ const char *touchPhaseName(TouchState::Phase phase)
 		case TouchState::TARGETING: return "TARGETING";
 		case TouchState::LIST_SCROLL: return "LIST_SCROLL";
 		case TouchState::UI_PRESS:  return "UI_PRESS";
+		case TouchState::MINIMAP_DRAG: return "MINIMAP_DRAG";
 	}
 	return "?";
 }

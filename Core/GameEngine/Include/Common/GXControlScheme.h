@@ -28,7 +28,12 @@
 //   army_buttons=1  the army column (GroupPanel.cpp) starts with its Army (screen / map), Planes,
 //                   Helicopters and Ground selection buttons
 //   camera_high=1   the camera may be zoomed out up to four times the map's height (3600 max)
-// Read once per process. Always the retail behaviour off Android.
+//   minimap_camera=1  a tap on the minimap moves the camera there even with units selected, and
+//                   dragging on it keeps the camera under the finger (ControlBarCallback.cpp,
+//                   LeftHUDInput); an armed ability or attack-move still targets through it
+//                   (GeneralsX @feature iOS port 25/10/2026)
+// Read again when the launcher was shown again (GXSettingsGeneration). Always the retail
+// behaviour on platforms without a launcher.
 #pragma once
 
 #include "Common/GXSettingsPath.h"
@@ -46,6 +51,7 @@ namespace GXControlScheme
 		ATTACK_MOVE,
 		ARMY_BUTTONS,
 		CAMERA_HIGH,
+		MINIMAP_CAMERA,
 		OPTION_COUNT
 	};
 
@@ -61,7 +67,7 @@ namespace GXControlScheme
 			for (int i = 0; i < OPTION_COUNT; ++i)
 				s_state[i] = 0;
 #if GX_HAS_SETTINGS_DIR
-			static const char *const kNames[OPTION_COUNT] = { "attack_move", "army_buttons", "camera_high" };
+			static const char *const kNames[OPTION_COUNT] = { "attack_move", "army_buttons", "camera_high", "minimap_camera" };
 			char path[256];
 			if (!GXSettingsFilePath("control_scheme", path, sizeof(path)))
 				path[0] = '\0';
@@ -82,8 +88,8 @@ namespace GXControlScheme
 					}
 				}
 				fclose(fp);
-				fprintf(stderr, "[GX-Controls] scheme: attack_move=%d army_buttons=%d camera_high=%d\n",
-					s_state[ATTACK_MOVE], s_state[ARMY_BUTTONS], s_state[CAMERA_HIGH]);
+				fprintf(stderr, "[GX-Controls] scheme: attack_move=%d army_buttons=%d camera_high=%d minimap_camera=%d\n",
+					s_state[ATTACK_MOVE], s_state[ARMY_BUTTONS], s_state[CAMERA_HIGH], s_state[MINIMAP_CAMERA]);
 				fflush(stderr);
 			}
 #endif

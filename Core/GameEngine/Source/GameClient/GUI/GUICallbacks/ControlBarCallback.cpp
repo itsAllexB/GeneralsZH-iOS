@@ -32,6 +32,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/GameUtility.h"
+#include "Common/GXControlScheme.h"
 #include "Common/NameKeyGenerator.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -58,6 +59,9 @@
 //external declarations of the Gadgets the callbacks can use
 WindowLayout *popupCommunicatorLayout = nullptr;
 
+
+// GeneralsX @feature iOS port 25/10/2026 A minimap-camera press is under way (GXControlScheme).
+static Bool s_gxMinimapCameraDrag = FALSE;
 
 //-------------------------------------------------------------------------------------------------
 /** Input procedure for the left HUD */
@@ -151,6 +155,11 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 			ICoord2D radar;
 			if( TheRadar->localPixelToRadar( &mouse, &radar ) )
 			{
+				// Minimap camera: the camera follows a finger dragged across the minimap.
+				Coord3D dragWorld;
+				if( s_gxMinimapCameraDrag && TheMouse->getMouseStatus()->leftState == MBS_Down
+						&& TheRadar->radarToWorld( &radar, &dragWorld ) )
+					TheTacticalView->userLookAt( &dragWorld );
 
 /*
 //
@@ -217,6 +226,7 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 		// ------------------------------------------------------------------------
 		case GWM_RIGHT_UP:// Here to eat
 		case GWM_LEFT_UP:// Here to eat
+			s_gxMinimapCameraDrag = FALSE;
 			break;
 
 		case GWM_RIGHT_DOWN:
@@ -257,6 +267,21 @@ WindowMsgHandledType LeftHUDInput( GameWindow *window, UnsignedInt msg,
 				// Having drawables and not being in attack move mode means that we should move.
 
 				const DrawableList *drawableList = TheInGameUI->getAllSelectedLocalDrawables(); // locally-owned only
+
+				// GeneralsX @feature iOS port 25/10/2026 Minimap camera (control scheme, minimap_camera):
+				// a tap moves the camera even with units selected -- the fast way around the map on a
+				// touch screen -- unless an ability or attack-move waits for a target.
+				const CommandButton *armed = TheInGameUI->getGUICommand();
+				const Bool armedForTarget = armed
+					&& ( ( ( armed->getCommandType() == GUI_COMMAND_SPECIAL_POWER || armed->getCommandType() == GUI_COMMAND_SPECIAL_POWER_FROM_SHORTCUT )
+							&& BitIsSet( armed->getOptions(), NEED_TARGET_POS ) )
+						|| armed->getCommandType() == GUI_COMMAND_ATTACK_MOVE );
+				if( msg == GWM_LEFT_DOWN && !armedForTarget && GXControlScheme::enabled( GXControlScheme::MINIMAP_CAMERA ) )
+				{
+					TheTacticalView->userLookAt( &world );
+					s_gxMinimapCameraDrag = TRUE;
+					break;
+				}
 
 				// see if the user wants to move the tactical view
 				if (	drawableList->empty()

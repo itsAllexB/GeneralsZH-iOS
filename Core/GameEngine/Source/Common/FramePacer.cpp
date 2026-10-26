@@ -18,6 +18,7 @@
 #include "PreRTS.h"
 
 #include "Common/FramePacer.h"
+#include "Common/GXSettingsPath.h"
 
 #include "GameClient/View.h"
 
@@ -112,9 +113,24 @@ Bool FramePacer::isActualFramesPerSecondLimitEnabled() const
 	return allowFpsLimit;
 }
 
+// GeneralsX @feature iOS port 25/10/2026 How many frames a second are drawn for the frame limit: at
+// the launcher's 120 fps (GXHighFrameRate) at least 120, while getActualLogicTimeScaleFps holds the
+// logic at the limit itself -- the decoupled logic step TheSuperHackers built for slow motion, used
+// the other way round. Limits from 120 up run as before, one logic step per frame. Offline only.
+static const Int kGXHighFrameRate = 120;
+
+static Bool gxHighFrameRateApplies()
+{
+	return GXHighFrameRate() && TheNetwork == nullptr;
+}
+
 Int FramePacer::getActualFramesPerSecondLimit() const
 {
-	return isActualFramesPerSecondLimitEnabled() ? getFramesPerSecondLimit() : RenderFpsPreset::UncappedFpsValue;
+	if (!isActualFramesPerSecondLimitEnabled())
+		return RenderFpsPreset::UncappedFpsValue;
+	if (gxHighFrameRateApplies())
+		return std::max<Int>(getFramesPerSecondLimit(), kGXHighFrameRate);
+	return getFramesPerSecondLimit();
 }
 
 Real FramePacer::getUpdateTime()  const
@@ -194,6 +210,13 @@ Int FramePacer::getActualLogicTimeScaleFps(LogicTimeQueryFlags flags) const
 	if (isLogicTimeScaleEnabled())
 	{
 		return getLogicTimeScaleFps();
+	}
+
+	// Drawn faster than the frame limit (120 fps): the logic keeps the limit's own rate.
+	if (gxHighFrameRateApplies() && isActualFramesPerSecondLimitEnabled()
+		&& getFramesPerSecondLimit() < getActualFramesPerSecondLimit())
+	{
+		return getFramesPerSecondLimit();
 	}
 
 	// Returns uncapped value to align with the render update as per the original game behavior.

@@ -88,6 +88,7 @@ come from the Android port:
 | With an ability armed: touch, drag, release | Aim it — the radius follows your finger; release fires; a second finger cancels |
 | With a building picked: tap | Place it under your finger |
 | Drag inside a list | Scroll it |
+| Tap / drag on the minimap | With units selected: a move order there. With **Minimap moves camera** on (Interface › Control scheme): the camera jumps there and follows your finger |
 | Force-attack / waypoint buttons on the command bar | The touch equivalents of Ctrl-click and Alt-click |
 
 Details: [`docs/port/TOUCH_CONTROLS.md`](docs/port/TOUCH_CONTROLS.md).
@@ -98,11 +99,14 @@ Before the game starts, a native SwiftUI launcher (source in [`ios/Launcher`](io
 lets you set up the game. It adapts to the screen: a tab bar on narrow screens, a sidebar
 on iPad and the iPhone Duo's inner display.
 
-- **Home** — Play; skip the intro movies; **Choose game folder** (see below); a check of
-  the game data (every `.big` archive and the files the game needs at startup); **Play
-  sound in silent mode** (on by default — off follows the ring/silent switch).
+- **Home** — Play; **Choose game folder** (see below) with a check of the game data (every
+  `.big` archive and the files the game needs at startup); skip the intro movies; **Play
+  sound in silent mode** (on by default — off follows the ring/silent switch); **Allow
+  higher camera**; **Frame Rate** 60 or 120 fps (120 on ProMotion screens: the game still
+  updates 60 times a second, scrolling and animation are drawn at 120).
 - **Interface** — Interface Size (the in-game HUD and menus, 70–200 %), Menu Text Size, and the
-  control scheme (Classic, Tactical, or your own mix: attack-move, army buttons, higher camera).
+  control scheme (Classic, Tactical, or your own mix of attack-move, army buttons and
+  **Minimap moves camera** — tap the minimap to jump there, drag on it to scroll).
 - **Tools** — the game logs of the last two sessions, with search and Share; "Collect logs";
   diagnostics switches (trace, performance, audio, touch overlay).
 - **Help** — about, license and credits.
@@ -125,9 +129,6 @@ files (fonts, extra window layouts, `dxvk.conf`) into it. Nothing in the folder 
 Why the app's folder is not in Files: that needs `LSSupportsOpeningDocumentsInPlace`, and
 together with Finder file sharing it leaves the document picker of development-signed
 apps stuck on an empty Recents page on iOS 27.2.
-
-**Copy into the app instead** keeps a private copy inside the app's storage — useful when
-the folder lives somewhere slow or unreliable.
 
 Settings are written to `Options.ini` and to files the engine reads from
 `Library/Application Support/GeneralsX/launcher`. How it plugs into the engine:
@@ -192,8 +193,10 @@ game data. The sideloading tool signs it with your own account. Ready-made IPAs 
 
 ## Known issues
 
-- The game renders at the window's size at 2× and is scaled up to the screen, with
-  thin bars where the aspect ratio differs. A native-resolution option is planned.
+- The game renders at the screen's native resolution, which is a lot of pixels for older
+  iPhones; a lower render resolution option is planned. Only the iPhone Duo has been
+  tested so far — other iPhones and iPads should adapt (the resolution, interface and touch
+  follow the screen), but are unverified.
 - Long sessions on iPad can be ended by iOS for memory (~3 GB resident); inherited
   from the earlier iOS port.
 - Backgrounding mid-game can occasionally crash; save often.

@@ -56,6 +56,23 @@ inline int &GXSettingsGeneration()
 // (GXLauncherRequested); SDL3GameEngine::update shows it once the game is back at the menus, through
 // the hook SDL3Main installs. The engine keeps running underneath -- it was never written to start
 // twice in one process. No hook (other platforms): the menus quit as they always did.
+// GeneralsX @feature iOS port 25/10/2026 The launcher's Frame Rate, GX_FPS_LIMIT = 60 or 120. At 120
+// the screen is drawn at least 120 times a second while the game logic keeps the rate the game's
+// frame limit asks for (FramePacer): smoother scrolling and animation on ProMotion screens, the same
+// game speed. Read again after the launcher was shown. Off (60) without the variable.
+inline bool GXHighFrameRate()
+{
+	static bool high = false;
+	static int loadedGeneration = -1;
+	if (loadedGeneration != GXSettingsGeneration())
+	{
+		loadedGeneration = GXSettingsGeneration();
+		const char *fps = getenv("GX_FPS_LIMIT");
+		high = fps != nullptr && atoi(fps) >= 120;
+	}
+	return high;
+}
+
 typedef void (*GXLauncherHookFn)();
 inline GXLauncherHookFn &GXLauncherHook()
 {

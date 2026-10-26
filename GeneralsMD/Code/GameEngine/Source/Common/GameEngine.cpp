@@ -1216,7 +1216,10 @@ static void gxCatchUpSpedUpLogic()
 		&& TheShell != nullptr && !TheShell->isShellActive()
 		&& !TheFramePacer->isTimeFrozen() && !TheFramePacer->isGameHalted()
 		&& TheFramePacer->isActualFramesPerSecondLimitEnabled()
-		&& TheFramePacer->getActualFramesPerSecondLimit() > normalFps;
+		&& TheFramePacer->getActualFramesPerSecondLimit() > normalFps
+		// GeneralsX @feature iOS port 25/10/2026 Not while frames are drawn faster than the limit
+		// (120 fps, FramePacer): the logic then does not step on every frame.
+		&& TheFramePacer->getActualFramesPerSecondLimit() == TheFramePacer->getFramesPerSecondLimit();
 	if (!applies)
 	{
 		s_debt = 0.0;

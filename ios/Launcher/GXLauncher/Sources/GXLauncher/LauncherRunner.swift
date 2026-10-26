@@ -45,6 +45,8 @@
 // Development switches (environment variables, read once per call):
 //   GX_LAUNCHER_SKIP=1          no UI: apply the saved settings and return at once
 //   GX_LAUNCHER_SECTION=<name>  open on home | interface | tools | help | logs
+//   GX_LAUNCHER_MAX_FPS=<n>     pretend the screen's maximum frame rate is n (the simulator
+//                               reports 60, so this shows the 120 fps choice there)
 
 #if canImport(UIKit) && os(iOS)
 import AVFoundation
@@ -53,8 +55,39 @@ import SwiftUI
 import UIKit
 import GXLauncherCore
 
+// GeneralsX @feature iOS port 26/10/2026 Landscape only -- the game's layouts are landscape -- except
+// on a foldable's inner display (the iPhone Duo's, about 1.42:1): it ignores an orientation lock and
+// laid the app out portrait even when held landscape, so Info.plist allows every orientation and the
+// lock is applied here, at run time, on every other device.
+final class LauncherHostingController: UIHostingController<LauncherRootView> {
+    var landscapeOnly = false
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        landscapeOnly ? .landscape : .all
+    }
+}
+
 @MainActor
 enum LauncherRunner {
+    /// iPads and ordinary iPhones (about 2.16:1) get landscape only; an iPhone screen that is nearly
+    /// square is a foldable's inner display and keeps every orientation.
+    static func isLandscapeOnly(_ scene: UIWindowScene) -> Bool {
+        if scene.traitCollection.userInterfaceIdiom != .phone { return true }
+        let size = scene.screen.bounds.size
+        let long = max(size.width, size.height), short = min(size.width, size.height)
+        return short <= 0 || long / short >= 1.6
+    }
+
+    /// The game's window follows SDL's orientation hint, which SDL also reads from the environment.
+    static func applyOrientationPolicy(landscapeOnly: Bool) {
+        if landscapeOnly {
+            setenv("SDL_IOS_ORIENTATIONS", "LandscapeLeft LandscapeRight", 1)
+        } else {
+            unsetenv("SDL_IOS_ORIENTATIONS")
+        }
+        log("orientations: \(landscapeOnly ? "landscape only" : "all (foldable inner display)")")
+    }
+
     /// Runs the launcher and returns the extra arguments (after applying the environment).
     static func run() -> [String] {
         let paths = LauncherPaths.current
@@ -63,13 +96,19 @@ enum LauncherRunner {
 
         if let skip = env["GX_LAUNCHER_SKIP"], !skip.isEmpty, skip != "0" {
             log("GX_LAUNCHER_SKIP set: applying saved settings without UI")
-            return finish(paths: paths, insets: measureInsets(in: waitForScene(timeout: 2)))
+            let scene = waitForScene(timeout: 2)
+            applyOrientationPolicy(landscapeOnly: scene.map(isLandscapeOnly) ?? true)
+            return finish(paths: paths, insets: measureInsets(in: scene),
+                          maxFPS: maximumFramesPerSecond(scene, env: env))
         }
 
         guard let scene = waitForScene(timeout: nil) else {
-            return finish(paths: paths, insets: nil)
+            return finish(paths: paths, insets: nil, maxFPS: FrameRate.defaultRate)
         }
-        let model = LauncherModel(paths: paths)
+        let maxFPS = maximumFramesPerSecond(scene, env: env)
+        let landscapeOnly = isLandscapeOnly(scene)
+        applyOrientationPolicy(landscapeOnly: landscapeOnly)
+        let model = LauncherModel(paths: paths, maximumFramesPerSecond: maxFPS)
         if let name = env["GX_LAUNCHER_SECTION"]?.lowercased() {
             if name == "logs" {
                 model.section = .tools
@@ -83,9 +122,15 @@ enum LauncherRunner {
         // Above SDL's launch-screen window (UIWindowLevelNormal + 1), which SDL hides on its own
         // once main() is running.
         window.windowLevel = UIWindow.Level(rawValue: UIWindow.Level.normal.rawValue + 2)
-        let host = UIHostingController(rootView: LauncherRootView(model: model))
+        let host = LauncherHostingController(rootView: LauncherRootView(model: model))
+        host.landscapeOnly = landscapeOnly
         window.rootViewController = host
         window.makeKeyAndVisible()
+        if landscapeOnly {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { error in
+                log("landscape request: \(error.localizedDescription)")
+            }
+        }
         log("launcher shown on scene \(scene.session.persistentIdentifier)")
 
         startMainQueueWatchdog()
@@ -97,15 +142,18 @@ enum LauncherRunner {
         window.isHidden = true
         window.rootViewController = nil
         spin(for: 0.05)  // let UIKit process the removal before the engine creates its window
-        return finish(paths: paths, insets: insets)
+        return finish(paths: paths, insets: insets, maxFPS: maxFPS)
     }
 
     /// Builds the plan from what is on disk now, applies the environment and returns the args.
-    private static func finish(paths: LauncherPaths, insets: SafeInsets?) -> [String] {
+    private static func finish(paths: LauncherPaths, insets: SafeInsets?, maxFPS: Int) -> [String] {
         let prefs = LauncherPreferences.load(from: paths.preferencesFile)
-        let outcome = LaunchPreparation.prepare(paths: paths, preferences: prefs, safeInsets: insets)
+        let outcome = LaunchPreparation.prepare(paths: paths, preferences: prefs, safeInsets: insets,
+                                                maximumFramesPerSecond: maxFPS)
         logOutcome(outcome)
-        LaunchPlanBuilder.apply(outcome.plan)
+        for name in LaunchPlanBuilder.apply(outcome.plan) {
+            log("unsetenv \(name) (set by an earlier run, no longer applies)")
+        }
         configureAudioSession(playInSilentMode: prefs.playSoundInSilentMode)
         for (name, value) in outcome.plan.environment {
             log("setenv \(name)=\(value)")
@@ -126,7 +174,6 @@ enum LauncherRunner {
         }
         switch outcome.source {
         case .external(let url)?: log("game data: chosen folder \(url.path)")
-        case .imported(let url)?: log("game data: imported copy \(url.path)")
         case .bundled(let url)?: log("game data: bundled \(url.path)")
         case nil: log("WARNING: no game data available")
         }
@@ -153,6 +200,12 @@ enum LauncherRunner {
         } catch {
             log("WARNING: audio session setup failed: \(error.localizedDescription)")
         }
+    }
+
+    /// The screen's maximum frame rate (120 on ProMotion), or the GX_LAUNCHER_MAX_FPS override.
+    static func maximumFramesPerSecond(_ scene: UIWindowScene?, env: [String: String]) -> Int {
+        if let forced = env["GX_LAUNCHER_MAX_FPS"].flatMap(Int.init), forced > 0 { return forced }
+        return scene?.screen.maximumFramesPerSecond ?? FrameRate.defaultRate
     }
 
     // MARK: - Scenes

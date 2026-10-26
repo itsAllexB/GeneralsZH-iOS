@@ -85,7 +85,7 @@ struct HostResult: Codable, Equatable {
 
     static let variables = ["GX_SETTINGS_DIR", "GX_GAME_DATA_DIR", "GX_UI_SCALE",
                             "GX_TRACE", "GX_PERF", "GX_AUDIO_TRACE", "GX_TOUCH_DEBUG",
-                            "SDL_AUDIO_CATEGORY", "GENERALSX_BUNDLED_FONTS_DIR", "DXVK_CONFIG_FILE"]
+                            "SDL_AUDIO_CATEGORY", "GX_FPS_LIMIT", "GENERALSX_BUNDLED_FONTS_DIR", "DXVK_CONFIG_FILE"]
     private static var runs = 0
 
     /// Calls gx_launcher_run() and records what it produced.

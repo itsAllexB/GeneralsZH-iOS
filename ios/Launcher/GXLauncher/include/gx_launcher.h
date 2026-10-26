@@ -31,21 +31,25 @@
 // call before any scene is active: it spins the run loop until one is. Called off the main thread
 // it shows no UI and only applies the saved settings.
 //
+// It may be called again later in the same process (the engine shows the launcher over the
+// running game); each call shows a fresh launcher and re-applies the environment. A variable an
+// earlier call set that no longer applies (a diagnostic switched off, Interface Size back to 100)
+// is unset; variables the launcher never set are left alone.
+//
 // Returns a NULL-terminated array of NUL-terminated UTF-8 strings, e.g.
 //     { "-gxSafeInsets", "0.0670,0.0000,0.0670,0.0773", "-nologo", NULL }
 // Never returns NULL; with nothing to add, the array holds just the terminating NULL.
 //
 // Memory: the array and its strings belong to GXLauncher. They stay valid until the next call to
 // gx_launcher_run() (which frees them) or process exit. Do not free or modify them; copy them if
-// they must outlive a second call. The engine calls it once, so pointing argv entries straight at
-// them is fine.
+// they must outlive a second call.
 //
 // Side effects before returning (setenv(..., 1)):
 //     GX_SETTINGS_DIR    always: <home>/Library/Application Support/GeneralsX/launcher (created)
-//     GX_GAME_DATA_DIR   the game data folder, by priority: the folder chosen in Files (its
-//                        security scope is opened and never closed) > the copy inside the app
-//                        (<home>/Library/Application Support/GeneralsX/ImportedGameData) >
-//                        <App>.app/GameData (developer builds); unset when there is none
+//     GX_GAME_DATA_DIR   the game data folder, by priority: the folder chosen in Files, or a game
+//                        folder found in the app's Documents (its security scope is opened and
+//                        never closed) > <App>.app/GameData (developer builds); unset when none
+//     GX_FPS_LIMIT       always: "60" or "120" (Home > Frame Rate; 120 only on 120 Hz screens)
 //     GX_UI_SCALE        Options.ini GXUiScale (70..200), when set and not 100
 //     GX_TRACE, GX_PERF, GX_AUDIO_TRACE, GX_TOUCH_DEBUG = "1" when that diagnostic is switched on
 //     SDL_AUDIO_CATEGORY "playback" (sound in silent mode, default) or "ambient"
@@ -58,7 +62,8 @@
 // See INTEGRATION.md for the full contract.
 //
 // Development: GX_LAUNCHER_SKIP=1 in the environment skips the UI; GX_LAUNCHER_SECTION=
-// home|interface|tools|help|logs opens that screen first.
+// home|interface|tools|help|logs opens that screen first; GX_LAUNCHER_MAX_FPS=120 pretends the
+// screen does 120 Hz (the simulator reports 60).
 
 #ifndef GX_LAUNCHER_H
 #define GX_LAUNCHER_H

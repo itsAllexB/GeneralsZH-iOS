@@ -34,10 +34,16 @@ import Foundation
 // MARK: - Control scheme
 
 /// The control scheme (SetupActivity.buildControlSchemeSection, GXControlScheme.h).
+///
+/// iOS: the presets cover attack-move, the army buttons and "minimap moves camera" (Classic: all
+/// off, Tactical: all on). The higher camera is its own switch (Home > Options > Allow higher
+/// camera) but still lives in this file as camera_high, which is where the engine reads it;
+/// choosing a preset never changes it. Lines with keys this launcher does not know are kept when
+/// the file is rewritten.
 public struct ControlScheme: Equatable, Sendable {
     public static let fileName = "control_scheme"
     /// File order and key names, as GXControlScheme.h's kNames.
-    public static let keys = ["attack_move", "army_buttons", "camera_high"]
+    public static let keys = ["attack_move", "army_buttons", "camera_high", "minimap_camera"]
 
     public enum Preset: Int, CaseIterable, Sendable {
         case classic, tactical, custom
@@ -47,37 +53,48 @@ public struct ControlScheme: Equatable, Sendable {
     public var attackMove: Bool
     /// The army column opens with its Army/Planes/Helicopters/Ground buttons.
     public var armyButtons: Bool
-    /// The camera may zoom out up to four times higher.
+    /// The camera may zoom out up to four times higher (not part of the presets).
     public var cameraHigh: Bool
+    /// A tap on the minimap moves the camera even with units selected; dragging on it pans.
+    public var minimapCamera: Bool
+    /// "key=value" lines of keys not listed in `keys`, kept as they were.
+    public var otherLines: [String] = []
 
-    public init(attackMove: Bool = false, armyButtons: Bool = false, cameraHigh: Bool = false) {
+    public init(attackMove: Bool = false, armyButtons: Bool = false, cameraHigh: Bool = false,
+                minimapCamera: Bool = false) {
         self.attackMove = attackMove
         self.armyButtons = armyButtons
         self.cameraHigh = cameraHigh
+        self.minimapCamera = minimapCamera
     }
 
     public static let classic = ControlScheme()
-    public static let tactical = ControlScheme(attackMove: true, armyButtons: true, cameraHigh: true)
+    public static let tactical = ControlScheme(attackMove: true, armyButtons: true, minimapCamera: true)
 
-    var values: [Bool] { [attackMove, armyButtons, cameraHigh] }
+    var values: [Bool] { [attackMove, armyButtons, cameraHigh, minimapCamera] }
+    /// The switches the presets cover.
+    var presetValues: [Bool] { [attackMove, armyButtons, minimapCamera] }
 
-    /// Android's controlSchemeIndex(): none on = Classic, all on = Tactical, else Custom.
+    /// Android's controlSchemeIndex() over the preset switches: none on = Classic, all on =
+    /// Tactical, else Custom. camera_high does not count.
     public var preset: Preset {
-        if values.allSatisfy({ !$0 }) { return .classic }
-        if values.allSatisfy({ $0 }) { return .tactical }
+        if presetValues.allSatisfy({ !$0 }) { return .classic }
+        if presetValues.allSatisfy({ $0 }) { return .tactical }
         return .custom
     }
 
-    /// Picking Classic or Tactical sets every switch; Custom leaves them as they are.
+    /// Picking Classic or Tactical sets the preset switches; Custom leaves them as they are.
+    /// The higher camera (and any unknown key) is kept either way.
     public mutating func apply(_ preset: Preset) {
         switch preset {
-        case .classic: self = .classic
-        case .tactical: self = .tactical
+        case .classic: attackMove = false; armyButtons = false; minimapCamera = false
+        case .tactical: attackMove = true; armyButtons = true; minimapCamera = true
         case .custom: break
         }
     }
 
-    /// Android's readControlScheme(): key=value lines, "1" is on, anything else off.
+    /// Android's readControlScheme(): key=value lines, "1" is on, anything else off. A missing
+    /// key is off, as in the engine.
     public static func parse(_ text: String) -> ControlScheme {
         var scheme = ControlScheme()
         for line in text.split(whereSeparator: { $0.isNewline }) {
@@ -88,15 +105,18 @@ public struct ControlScheme: Equatable, Sendable {
             case "attack_move": scheme.attackMove = on
             case "army_buttons": scheme.armyButtons = on
             case "camera_high": scheme.cameraHigh = on
-            default: continue
+            case "minimap_camera": scheme.minimapCamera = on
+            default:
+                if !key.isEmpty { scheme.otherLines.append(String(line)) }
             }
         }
         return scheme
     }
 
-    /// The exact text Android's writeControlScheme() writes.
+    /// Android's writeControlScheme() format: every known key in `keys` order, then any other lines.
     public var fileText: String {
         zip(Self.keys, values).map { "\($0)=\($1 ? "1" : "0")\n" }.joined()
+            + otherLines.map { $0 + "\n" }.joined()
     }
 
     public static func read(from file: URL) -> ControlScheme {
@@ -104,9 +124,10 @@ public struct ControlScheme: Equatable, Sendable {
         return parse(text)
     }
 
-    /// Classic deletes the file (no file is the retail game); anything else writes all three keys.
+    /// Everything off (and nothing unknown to keep) deletes the file -- no file is the retail
+    /// game; anything else writes all keys.
     public func write(to file: URL) throws {
-        if preset == .classic {
+        if values.allSatisfy({ !$0 }) && otherLines.isEmpty {
             try removeIfPresent(file)
             return
         }

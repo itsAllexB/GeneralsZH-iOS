@@ -1313,6 +1313,18 @@ void SkirmishGameOptionsMenuInit( WindowLayout *layout, void *userData )
 	TheSkirmishGameInfo->setSlot(1, gSlot);
 
 	ParseAsciiStringToGameInfo(TheSkirmishGameInfo, prefs.getSlotList());
+	// GeneralsX @bugfix iOS port 26/10/2026 The saved slot list carries the human player's name from
+	// the last skirmish and replaced the current one: a name changed since (the iOS launcher's Player
+	// Name writes UserName) never showed, and was saved back over UserName on the next game.
+	{
+		const UnicodeString userName = prefs.getUserName();
+		for (Int i = 0; i < MAX_SLOTS; ++i)
+		{
+			GameSlot *slot = TheSkirmishGameInfo->getSlot(i);
+			if (slot != nullptr && slot->isHuman())
+				slot->setName(userName);
+		}
+	}
 	TheSkirmishGameInfo->setSeed(GetTickCount());
 
 	UnsignedInt isPreorder = 0;

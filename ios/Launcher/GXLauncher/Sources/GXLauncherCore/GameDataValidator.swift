@@ -35,7 +35,7 @@
 //   - Names are compared case-insensitively everywhere (Android used File.exists() for step 0).
 //     The bundled ZH_Generals ships "maps.big"/"shaders.big" in lower case.
 //   - No separate "base Generals folder" setting: on iOS the base archives are bundled (in
-//     GameData/ZH_Generals) or part of the imported folder.
+//     GameData/ZH_Generals) or part of the chosen game folder.
 //   - The original-Generals game mode (GameData.ini check) is not offered yet; the critical entry
 //     is a parameter so it can be.
 

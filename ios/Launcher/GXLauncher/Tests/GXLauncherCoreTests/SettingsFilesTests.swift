@@ -26,19 +26,82 @@ final class SettingsFilesTests: XCTestCase {
     func testPresets() {
         XCTAssertEqual(ControlScheme.classic.preset, .classic)
         XCTAssertEqual(ControlScheme.tactical.preset, .tactical)
+        XCTAssertEqual(ControlScheme.tactical,
+                       ControlScheme(attackMove: true, armyButtons: true, cameraHigh: false, minimapCamera: true),
+                       "Tactical: attack-move, army buttons and minimap camera; no longer the higher camera")
         XCTAssertEqual(ControlScheme(attackMove: true).preset, .custom)
-        var scheme = ControlScheme(cameraHigh: true)
+        XCTAssertEqual(ControlScheme(attackMove: true, armyButtons: true).preset, .custom, "minimap camera off: Custom")
+        // The higher camera is not part of the presets.
+        XCTAssertEqual(ControlScheme(cameraHigh: true).preset, .classic)
+        XCTAssertEqual(ControlScheme(attackMove: true, armyButtons: true, cameraHigh: true, minimapCamera: true).preset, .tactical)
+
+        var scheme = ControlScheme(attackMove: true, cameraHigh: true)
         scheme.apply(.custom)
-        XCTAssertEqual(scheme, ControlScheme(cameraHigh: true), "Custom keeps the switches")
+        XCTAssertEqual(scheme, ControlScheme(attackMove: true, cameraHigh: true), "Custom keeps the switches")
         scheme.apply(.tactical)
-        XCTAssertEqual(scheme, .tactical)
+        XCTAssertEqual(scheme, ControlScheme(attackMove: true, armyButtons: true, cameraHigh: true, minimapCamera: true),
+                       "a preset never resets camera_high")
         scheme.apply(.classic)
-        XCTAssertEqual(scheme, .classic)
+        XCTAssertEqual(scheme, ControlScheme(cameraHigh: true), "a preset never resets camera_high")
+        scheme.cameraHigh = false
+        scheme.apply(.tactical)
+        XCTAssertFalse(scheme.cameraHigh, "nor sets it")
     }
 
     func testControlSchemeFileTextMatchesAndroid() {
-        XCTAssertEqual(ControlScheme.tactical.fileText, "attack_move=1\narmy_buttons=1\ncamera_high=1\n")
-        XCTAssertEqual(ControlScheme(armyButtons: true).fileText, "attack_move=0\narmy_buttons=1\ncamera_high=0\n")
+        // Android's three keys in its order, then minimap_camera (GXControlScheme.h kNames).
+        XCTAssertEqual(ControlScheme(attackMove: true, armyButtons: true, cameraHigh: true, minimapCamera: true).fileText,
+                       "attack_move=1\narmy_buttons=1\ncamera_high=1\nminimap_camera=1\n")
+        XCTAssertEqual(ControlScheme(armyButtons: true).fileText,
+                       "attack_move=0\narmy_buttons=1\ncamera_high=0\nminimap_camera=0\n")
+    }
+
+    func testHigherCameraAloneKeepsTheFile() throws {
+        let home = try TempHome()
+        let file = home.paths.settingsFile(ControlScheme.fileName)
+        // Classic preset + Allow higher camera: the file must stay, with camera_high=1.
+        try ControlScheme(cameraHigh: true).write(to: file)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8),
+                       "attack_move=0\narmy_buttons=0\ncamera_high=1\nminimap_camera=0\n")
+        // An existing (Android-era, three-key) file with camera_high=1 reads back with the toggle on.
+        try Data("attack_move=1\narmy_buttons=1\ncamera_high=1\n".utf8).write(to: file)
+        let read = ControlScheme.read(from: file)
+        XCTAssertTrue(read.cameraHigh)
+        XCTAssertFalse(read.minimapCamera, "missing key = off, as in the engine")
+        XCTAssertEqual(read.preset, .custom)
+    }
+
+    func testMinimapCameraIsWrittenAndKept() throws {
+        let home = try TempHome()
+        let file = home.paths.settingsFile(ControlScheme.fileName)
+        var scheme = ControlScheme(minimapCamera: true)
+        try scheme.write(to: file)
+        XCTAssertEqual(ControlScheme.read(from: file), scheme)
+        XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("minimap_camera=1\n"))
+        // Toggling something else and rewriting keeps it.
+        scheme = ControlScheme.read(from: file)
+        scheme.cameraHigh = true
+        try scheme.write(to: file)
+        XCTAssertTrue(ControlScheme.read(from: file).minimapCamera)
+        // Classic turns it off; Tactical on.
+        scheme.apply(.classic)
+        XCTAssertFalse(scheme.minimapCamera)
+        scheme.apply(.tactical)
+        XCTAssertTrue(scheme.minimapCamera)
+    }
+
+    func testUnknownKeysSurviveRewrite() throws {
+        let home = try TempHome()
+        let file = home.paths.settingsFile(ControlScheme.fileName)
+        try home.paths.ensureSettingsDir()
+        try Data("attack_move=1\nfuture_option=1\ncamera_high=0\n".utf8).write(to: file)
+        var scheme = ControlScheme.read(from: file)
+        XCTAssertEqual(scheme.otherLines, ["future_option=1"])
+        scheme.apply(.classic)
+        try scheme.write(to: file)
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8),
+                       "attack_move=0\narmy_buttons=0\ncamera_high=0\nminimap_camera=0\nfuture_option=1\n",
+                       "an unknown key keeps the file and is kept")
     }
 
     func testControlSchemeWriteAndRead() throws {
@@ -46,18 +109,20 @@ final class SettingsFilesTests: XCTestCase {
         let file = home.paths.settingsFile(ControlScheme.fileName)
         let custom = ControlScheme(attackMove: true, cameraHigh: true)
         try custom.write(to: file)
-        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "attack_move=1\narmy_buttons=0\ncamera_high=1\n")
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "attack_move=1\narmy_buttons=0\ncamera_high=1\nminimap_camera=0\n")
         XCTAssertEqual(ControlScheme.read(from: file), custom)
 
         try ControlScheme.classic.write(to: file)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path), "Classic = no file (retail)")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path), "everything off = no file (retail)")
         XCTAssertEqual(ControlScheme.read(from: file), .classic)
         try ControlScheme.classic.write(to: file)  // deleting twice is fine
     }
 
     func testControlSchemeParseIsTolerant() {
-        let parsed = ControlScheme.parse("# comment\n camera_high = 1 \nattack_move=yes\nunknown=1\narmy_buttons=1\r\n")
-        XCTAssertEqual(parsed, ControlScheme(attackMove: false, armyButtons: true, cameraHigh: true))
+        let parsed = ControlScheme.parse("# comment\n camera_high = 1 \nattack_move=yes\nunknown=1\narmy_buttons=1\r\nminimap_camera=1\n")
+        var expected = ControlScheme(attackMove: false, armyButtons: true, cameraHigh: true, minimapCamera: true)
+        expected.otherLines = ["unknown=1"]
+        XCTAssertEqual(parsed, expected)
     }
 
     func testMouseMode() throws {
@@ -101,7 +166,7 @@ final class SettingsFilesTests: XCTestCase {
     func testPreferencesRoundTrip() throws {
         let home = try TempHome()
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile), LauncherPreferences())
-        let prefs = LauncherPreferences(skipIntro: true, playSoundInSilentMode: false)
+        let prefs = LauncherPreferences(skipIntro: true, playSoundInSilentMode: false, frameRate: 120)
         try prefs.save(to: home.paths.preferencesFile)
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile), prefs)
         // An older file: sound defaults to ON, the retired "preferImportedData" is ignored.
@@ -109,13 +174,14 @@ final class SettingsFilesTests: XCTestCase {
         XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile),
                        LauncherPreferences(skipIntro: true, playSoundInSilentMode: true))
         XCTAssertTrue(LauncherPreferences().playSoundInSilentMode, "Play sound in silent mode defaults to ON")
+        XCTAssertEqual(LauncherPreferences().frameRate, 60, "Frame Rate defaults to 60")
+        XCTAssertEqual(LauncherPreferences.load(from: home.paths.preferencesFile).frameRate, 60, "missing key: 60")
     }
 
     func testPathsMatchTheEngine() {
         let paths = LauncherPaths(home: URL(fileURLWithPath: "/h"), bundledGameData: URL(fileURLWithPath: "/b/GameData"))
         XCTAssertEqual(paths.optionsIni.path, "/h/Library/Application Support/GeneralsX/GeneralsZH/Options.ini")
         XCTAssertEqual(paths.settingsDir.path, "/h/Library/Application Support/GeneralsX/launcher")
-        XCTAssertEqual(paths.importedGameData.path, "/h/Library/Application Support/GeneralsX/ImportedGameData")
         XCTAssertEqual(paths.currentLog.path, "/h/Documents/generals-stderr.log")
         XCTAssertEqual(paths.previousLog.path, "/h/Documents/generals-stderr-prev.log")
     }

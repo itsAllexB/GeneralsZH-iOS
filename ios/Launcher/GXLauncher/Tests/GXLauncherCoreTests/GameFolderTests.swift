@@ -224,25 +224,27 @@ final class GameFolderTests: XCTestCase {
         let home = try TempHome()
         let paths = home.paths
         try makeSupport(paths)
-        try BigWriter.makeGameFolder(at: paths.importedGameData)
+        try BigWriter.makeGameFolder(at: paths.bundledGameData)
         let game = home.root.appendingPathComponent("iCloud ZH")
         try BigWriter.makeGameFolder(at: game)
         try GameFolderStore.save(try GameFolderStore.makeReference(picked: game, gameFolder: game), paths: paths)
 
-        // Still downloading from iCloud: not used, the copy in the app is.
+        // Still downloading from iCloud: not used, the developer build's bundled data is.
         try FileManager.default.removeItem(at: game.appendingPathComponent("W3DZH.big"))
         try Data().write(to: game.appendingPathComponent(".W3DZH.big.icloud"))
         var outcome = LaunchPreparation.prepare(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(outcome.source, .imported(paths.importedGameData))
+        XCTAssertEqual(outcome.source, .bundled(paths.bundledGameData))
         XCTAssertEqual(outcome.pendingDownloads.map(\.lastPathComponent), ["W3DZH.big"])
-        XCTAssertEqual(read(paths.importedGameData.appendingPathComponent("dxvk.conf")), "dxvk.logLevel = none\n",
-                       "the imported copy gets the support files too")
+        XCTAssertNil(outcome.support, "the read-only bundle gets no support files")
 
-        // Gone: still the copy in the app.
+        // Gone: still the bundle; without one, nothing.
         try FileManager.default.removeItem(at: game)
         outcome = LaunchPreparation.prepare(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
-        XCTAssertEqual(outcome.source, .imported(paths.importedGameData))
+        XCTAssertEqual(outcome.source, .bundled(paths.bundledGameData))
         if case .unavailable = outcome.folderState {} else { XCTFail("expected unavailable") }
+        try FileManager.default.removeItem(at: paths.bundledGameData)
+        outcome = LaunchPreparation.prepare(paths: paths, preferences: LauncherPreferences(), safeInsets: nil)
+        XCTAssertNil(outcome.source)
     }
 
     func testPrepareReadOnlyFolderSetsFallbackEnvironment() throws {
@@ -269,15 +271,5 @@ final class GameFolderTests: XCTestCase {
         XCTAssertNil(outcome.plan.value(of: "GX_GAME_DATA_DIR"))
         XCTAssertEqual(outcome.plan.value(of: "SDL_AUDIO_CATEGORY"), "playback")
         XCTAssertTrue(FileManager.default.fileExists(atPath: home.paths.settingsDir.path))
-    }
-
-    func testImporterUsesGameSupport() throws {
-        let home = try TempHome()
-        try makeSupport(home.paths)
-        let source = home.root.appendingPathComponent("Picked/ZH")
-        try BigWriter.makeGameFolder(at: source)
-        _ = try GameDataImporter.importFolder(from: source, paths: home.paths) { _ in }
-        XCTAssertEqual(read(home.paths.importedGameData.appendingPathComponent("Window/Menus/MainMenu.wnd")), "<wnd/>")
-        XCTAssertEqual(read(home.paths.importedGameData.appendingPathComponent("DefaultOptions.ini")), "StaticGameLOD = High\n")
     }
 }

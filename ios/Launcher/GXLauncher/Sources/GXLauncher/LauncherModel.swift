@@ -50,12 +50,6 @@ final class LauncherModel: ObservableObject {
         }
     }
 
-    enum ImportState: Equatable {
-        case idle
-        case copying(ImportProgress)
-        case failed(String)
-    }
-
     /// The folder chosen in Files (GameFolderStore).
     enum ExternalStatus: Equatable {
         /// No folder chosen.
@@ -85,9 +79,7 @@ final class LauncherModel: ObservableObject {
     @Published private(set) var diagnostics: Set<MarkerFile>
 
     @Published private(set) var bundledReport: GameDataReport?
-    @Published private(set) var importedReport: GameDataReport?
     @Published private(set) var isValidating = false
-    @Published private(set) var importState: ImportState = .idle
 
     @Published private(set) var externalStatus: ExternalStatus = .none
     /// The opened game folder while `externalStatus` is `.ready`.
@@ -106,10 +98,16 @@ final class LauncherModel: ObservableObject {
     /// Set when the player tapped Play; the runner's run loop watches it.
     @Published private(set) var finished = false
 
-    private var importTask: Task<Void, Never>?
+    /// Home > Options > Player Name, as typed. Read from Skirmish.ini / Network.ini whenever the
+    /// launcher appears (the game writes those files too); written on commit and on Play.
+    @Published var playerName: String
 
-    init(paths: LauncherPaths) {
+    /// The screen's maximum frame rate (120 on ProMotion), for the Frame Rate choices.
+    let maximumFramesPerSecond: Int
+
+    init(paths: LauncherPaths, maximumFramesPerSecond: Int = FrameRate.defaultRate) {
         self.paths = paths
+        self.maximumFramesPerSecond = maximumFramesPerSecond
         _ = try? paths.ensureSettingsDir()
         preferences = LauncherPreferences.load(from: paths.preferencesFile)
         let options = OptionsIniStore(file: paths.optionsIni, defaults: nil).load()
@@ -119,13 +117,21 @@ final class LauncherModel: ObservableObject {
         mouseMode = MouseMode.read(from: paths.settingsFile(MouseMode.fileName))
         collectLogs = !MarkerFile.loggingOff.isPresent(in: paths)
         diagnostics = Set(MarkerFile.diagnostics.filter { $0.isPresent(in: paths) })
+        playerName = PlayerName.read(paths: paths)
     }
 
     // MARK: - Play
 
     func play() {
-        cancelImport()
+        commitPlayerName()
         finished = true
+    }
+
+    /// Writes the Player Name into Skirmish.ini and Network.ini (nothing when empty).
+    func commitPlayerName() {
+        let name = PlayerName.sanitize(playerName)
+        if name != playerName { playerName = name }
+        report { try PlayerName.write(name, paths: paths) }
     }
 
     /// The chosen folder, when it can be played from right now.
@@ -148,7 +154,6 @@ final class LauncherModel: ObservableObject {
         case .external?:
             if case .ready(let report) = externalStatus { return report }
             return nil
-        case .imported?: return importedReport
         case .bundled?: return bundledReport
         case nil: return nil
         }
@@ -164,7 +169,6 @@ final class LauncherModel: ObservableObject {
     /// Play needs some game data.
     var canPlay: Bool { activeSource != nil }
 
-    var hasImportedData: Bool { FileManager.default.fileExists(atPath: paths.importedGameData.path) }
     var hasBundledData: Bool { FileManager.default.fileExists(atPath: paths.bundledGameData.path) }
 
     // MARK: - Launcher preferences
@@ -178,6 +182,20 @@ final class LauncherModel: ObservableObject {
     func setPlaySoundInSilentMode(_ on: Bool) {
         var prefs = preferences
         prefs.playSoundInSilentMode = on
+        savePreferences(prefs)
+    }
+
+    /// The Frame Rate choices this screen can show (120 only at 120 Hz).
+    var frameRateChoices: [Int] { FrameRate.choices(maximumFramesPerSecond: maximumFramesPerSecond) }
+
+    /// The saved frame rate as it will be used (120 falls back to 60 on a 60 Hz screen).
+    var frameRate: Int {
+        FrameRate.effective(preferences.frameRate, maximumFramesPerSecond: maximumFramesPerSecond)
+    }
+
+    func setFrameRate(_ fps: Int) {
+        var prefs = preferences
+        prefs.frameRate = FrameRate.effective(fps, maximumFramesPerSecond: maximumFramesPerSecond)
         savePreferences(prefs)
     }
 
@@ -211,6 +229,13 @@ final class LauncherModel: ObservableObject {
     func setControlScheme(_ scheme: ControlScheme) {
         controlScheme = scheme
         report { try scheme.write(to: paths.settingsFile(ControlScheme.fileName)) }
+    }
+
+    /// Home > Options > Allow higher camera (camera_high in control_scheme).
+    func setCameraHigh(_ on: Bool) {
+        var scheme = controlScheme
+        scheme.cameraHigh = on
+        setControlScheme(scheme)
     }
 
     func applyPreset(_ preset: ControlScheme.Preset) {
@@ -254,61 +279,11 @@ final class LauncherModel: ObservableObject {
         Task.detached(priority: .userInitiated) {
             let bundled = FileManager.default.fileExists(atPath: paths.bundledGameData.path)
                 ? GameDataValidator.validate(paths.bundledGameData) : nil
-            let imported = FileManager.default.fileExists(atPath: paths.importedGameData.path)
-                ? GameDataValidator.validate(paths.importedGameData) : nil
             await MainActor.run {
                 self.bundledReport = bundled
-                self.importedReport = imported
                 self.isValidating = false
             }
         }
-    }
-
-    func startImport(from source: URL) {
-        guard importTask == nil else { return }
-        importState = .copying(ImportProgress(copiedBytes: 0, totalBytes: 0, currentFile: ""))
-        let paths = paths
-        // The model outlives the launcher window, so a strong capture is fine (and Sendable:
-        // the model is main-actor isolated).
-        importTask = Task.detached(priority: .userInitiated) { [self] in
-            let scoped = source.startAccessingSecurityScopedResource()
-            defer { if scoped { source.stopAccessingSecurityScopedResource() } }
-            // Like "Choose game folder": a parent of the game folder is fine.
-            let source = GameDataValidator.findGameFolder(in: source) ?? source
-            // Throttle UI updates to ~10 per second.
-            let throttle = ProgressThrottle()
-            do {
-                let result = try GameDataImporter.importFolder(from: source, paths: paths) { progress in
-                    guard throttle.shouldEmit(progress) else { return }
-                    Task { @MainActor in
-                        if case .copying = self.importState { self.importState = .copying(progress) }
-                    }
-                }
-                await MainActor.run {
-                    self.importedReport = result
-                    self.importState = .idle
-                    self.importTask = nil
-                }
-            } catch {
-                let message = Self.describe(error)
-                let cancelled = Task.isCancelled
-                await MainActor.run {
-                    self.importState = cancelled ? .idle : .failed(message)
-                    self.importTask = nil
-                }
-            }
-        }
-    }
-
-    func cancelImport() {
-        importTask?.cancel()
-    }
-
-    func removeImported() {
-        report { try GameDataImporter.removeImported(paths: paths) }
-        importedReport = nil
-        importState = .idle
-        objectWillChange.send()
     }
 
     // MARK: - Game folder chosen in Files
@@ -409,39 +384,6 @@ final class LauncherModel: ObservableObject {
         externalFolder = nil
         externalLocation = nil
         supportNotice = nil
-    }
-
-    nonisolated static func describe(_ error: Error) -> String {
-        switch error as? ImportError {
-        case .sourceUnreadable?:
-            return L("The selected folder could not be read.")
-        case .notEnoughSpace(let needed, let available)?:
-            return L("Not enough free space: %@ needed, %@ available.",
-                     ByteCountFormatter.string(fromByteCount: needed, countStyle: .file),
-                     ByteCountFormatter.string(fromByteCount: available, countStyle: .file))
-        case .notAGameFolder?:
-            return L("The selected folder does not contain INIZH.big or INI.big. Pick the folder the game is installed in.")
-        case .cancelled?:
-            return L("Import cancelled.")
-        case .copyFailed(let name)?:
-            return L("Copying %@ failed.", name)
-        case nil:
-            return error.localizedDescription
-        }
-    }
-}
-
-/// Lets the copying thread report progress at most ~10 times per second.
-private final class ProgressThrottle: @unchecked Sendable {
-    private var last = Date.distantPast
-    private let lock = NSLock()
-
-    func shouldEmit(_ progress: ImportProgress) -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        let now = Date()
-        if now.timeIntervalSince(last) < 0.1 && progress.copiedBytes < progress.totalBytes { return false }
-        last = now
-        return true
     }
 }
 #endif

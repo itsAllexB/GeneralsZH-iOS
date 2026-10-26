@@ -186,13 +186,13 @@ public enum InterfaceScale {
 }
 
 /// Menu Text Size: ResolutionFontAdjustment (percent), read by OptionPreferences::
-/// getResolutionFontAdjustment(). Android: slider 0...150, step 1, default 70; a negative saved
+/// getResolutionFontAdjustment(). Slider 0...150, step 10 (Android: step 1), default 70; a negative saved
 /// value (the in-game Options menu writes -100 when never set) means "the game's default" and
 /// shows as 70 (SetupActivity.readUiScalePercent).
 public enum MenuTextSize {
     public static let key = "ResolutionFontAdjustment"
     public static let range: ClosedRange<Int> = 0...150
-    public static let step = 1
+    public static let step = 10
     public static let defaultPercent = 70
 
     public static func read(_ doc: OptionsIniDocument) -> Int {
@@ -200,8 +200,11 @@ public enum MenuTextSize {
         return min(value, range.upperBound)
     }
 
+    /// A value set from the slider: rounded to the step and clamped. (A value read from the file
+    /// is shown as stored, e.g. 85 written by the in-game menu, until the player moves the slider.)
     public static func clamp(_ percent: Int) -> Int {
-        min(max(percent, range.lowerBound), range.upperBound)
+        let stepped = Int((Double(percent) / Double(step)).rounded()) * step
+        return min(max(stepped, range.lowerBound), range.upperBound)
     }
 }
 

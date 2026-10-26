@@ -17,9 +17,14 @@
 */
 
 // GeneralsX @feature iOS launcher 25/10/2026 Interface: Interface Size (Options.ini GXUiScale),
-// Menu Text Size (Options.ini ResolutionFontAdjustment), the control scheme (control_scheme) and
-// mouse/touchpad mode (mouse_mode). Ranges, steps and defaults are the Android launcher's. Values
-// are saved as they change -- no Apply button -- and take effect the next time the game starts.
+// Menu Text Size (Options.ini ResolutionFontAdjustment), the control scheme (control_scheme:
+// attack-move, army buttons and minimap camera; the higher camera, also stored there, is on
+// Home > Options) and
+// mouse/touchpad mode (mouse_mode). Defaults are the Android launcher's; Interface Size also goes
+// down to 70% and Menu Text Size moves in steps of 10. Values are saved as they change -- no Apply
+// button. Interface Size, the control scheme and mouse mode take effect when Play is tapped (the
+// engine re-reads them when the launcher is shown over the running game); Menu Text Size is read
+// when the app starts.
 
 #if canImport(UIKit) && os(iOS)
 import SwiftUI
@@ -53,7 +58,7 @@ struct InterfaceView: View {
         } header: {
             Text(L("Interface Size"))
         } footer: {
-            Text(L("Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect the next time you launch the game."))
+            Text(L("Above 100% the in-game interface grows: the control bar with the radar grows up from the bottom, and the generals' powers, chat, messages, menus and the main menu's buttons grow from where they sit, each only as far as the screen allows. Below 100% it shrinks, leaving more of the battlefield visible on large screens. Takes effect when you tap Play."))
         }
     }
 
@@ -72,7 +77,7 @@ struct InterfaceView: View {
         } header: {
             Text(L("Menu Text Size"))
         } footer: {
-            Text(L("Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time you launch the game."))
+            Text(L("Scales most menu button and label text for the screen resolution. 70 is the game's own default; higher values make menu text bigger. Takes effect the next time the app starts."))
         }
     }
 
@@ -107,23 +112,23 @@ struct InterfaceView: View {
                 SettingLabel(title: L("Army buttons"),
                              detail: L("The army column opens with the buttons that select every combat unit on screen or on the whole map, planes, helicopters or ground forces."))
             }
-            Toggle(isOn: schemeBinding.cameraHigh) {
-                SettingLabel(title: L("Higher camera"),
-                             detail: L("The camera zooms out up to four times further than the map allows."))
+            Toggle(isOn: schemeBinding.minimapCamera) {
+                SettingLabel(title: L("Minimap moves camera"),
+                             detail: L("Tapping the minimap jumps the camera there even with units selected, and dragging on the minimap moves the camera with your finger. An armed ability or attack-move still targets through the minimap."))
             }
         } header: {
             Text(L("Control scheme"))
         } footer: {
-            Text(L("Takes effect the next time the game starts. Works in skirmish, the campaign and online games alike: only how your orders are given changes, not the game's rules."))
+            Text(L("Takes effect when you tap Play. Works in skirmish, the campaign and LAN games alike: only how your orders are given changes, not the game's rules."))
         }
     }
 
     private func presetDescription(_ preset: ControlScheme.Preset) -> String {
         switch preset {
         case .classic:
-            return L("As in the original game: a move order just moves, the camera zooms out to the usual height, the army column opens with the control groups only.")
+            return L("As in the original game: a move order just moves, the army column opens with the control groups only, and tapping the minimap with units selected sends them there.")
         case .tactical:
-            return L("Combat units attack on the move, the army column opens with the army buttons too, and the camera zooms out up to four times higher.")
+            return L("Combat units attack on the move, the army column opens with the army buttons too, and the minimap moves the camera.")
         case .custom:
             return L("Your own mix of the switches below.")
         }
@@ -149,7 +154,7 @@ struct InterfaceView: View {
                 }
             }
         } footer: {
-            Text(L("Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect the next time the game starts."))
+            Text(L("Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect when you tap Play."))
         }
     }
 }

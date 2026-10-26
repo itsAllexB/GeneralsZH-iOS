@@ -25,8 +25,6 @@
 //       GX_SETTINGS_DIR: control_scheme, mouse_mode, logging_off, gx_*.txt markers and the
 //       launcher's own preferences. The app bundle is read-only, so markers cannot live next to
 //       the game data as they do on Android.
-//   $HOME/Library/Application Support/GeneralsX/ImportedGameData/
-//       A user-imported copy of the game data (Home > Import game data folder).
 //   $HOME/Documents/generals-stderr.log, generals-stderr-prev.log
 //       The engine's stderr mirror (SDL3Main.cpp), shown by the log viewer.
 //   <App>.app/GameData/
@@ -80,12 +78,9 @@ public struct LauncherPaths: Sendable, Equatable {
     public var userDataDir: URL { generalsXSupport.appendingPathComponent("GeneralsZH", isDirectory: true) }
 
     public var optionsIni: URL { userDataDir.appendingPathComponent("Options.ini", isDirectory: false) }
-
-    /// Where Home > Import game data folder copies to.
-    public var importedGameData: URL { generalsXSupport.appendingPathComponent("ImportedGameData", isDirectory: true) }
-
-    /// Staging folder for an import in progress; renamed to `importedGameData` on success.
-    public var importStaging: URL { generalsXSupport.appendingPathComponent("ImportedGameData.partial", isDirectory: true) }
+    /// The game's skirmish and LAN preferences (UserName, see PlayerName).
+    public var skirmishIni: URL { userDataDir.appendingPathComponent("Skirmish.ini", isDirectory: false) }
+    public var networkIni: URL { userDataDir.appendingPathComponent("Network.ini", isDirectory: false) }
 
     public var documents: URL { home.appendingPathComponent("Documents", isDirectory: true) }
     public var currentLog: URL { documents.appendingPathComponent("generals-stderr.log", isDirectory: false) }

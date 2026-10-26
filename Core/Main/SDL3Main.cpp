@@ -485,11 +485,13 @@ static void gxShowLauncherAgain()
 {
 	const char *dataDir = getenv("GX_GAME_DATA_DIR");
 	const std::string previousDataDir = dataDir != nullptr ? dataDir : "";
-	// Only set when not 100: a size put back to 100 must not keep the old value.
-	unsetenv("GX_UI_SCALE");
 	fprintf(stderr, "INFO: showing the launcher over the game\n");
 	gx_launcher_run();
 	++GXSettingsGeneration();
+	// The launcher's window was the key window: hand that back to the game's, or it may stay
+	// marked as without focus (and the game paused) until something else changes it.
+	if (TheSDL3Window != nullptr)
+		SDL_RaiseWindow(TheSDL3Window);
 	dataDir = getenv("GX_GAME_DATA_DIR");
 	if (previousDataDir != (dataDir != nullptr ? dataDir : "")) {
 		fprintf(stderr, "INFO: game folder changed to %s -- ending the app, the next start uses it\n",
@@ -1135,6 +1137,14 @@ int main(int argc, char* argv[])
 		// Same for pens (Apple Pencil on iPad): SDL would otherwise synthesize mouse
 		// events from them as well, next to the gesture translator's own.
 		SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
+#endif
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+		// GeneralsX @bugfix iOS port 25/10/2026 The system's edge gestures (home and app switcher from
+		// the bottom, Control Center and notifications from the top) need a second swipe, and the
+		// home indicator hides. Without it a finger or palm resting on an edge during a long press
+		// made iOS start such a gesture: the app went inactive for 2-5 seconds at a time, nine times
+		// in one 17-minute match on the iPhone Duo, with the game paused and the touches lost.
+		SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");
 #endif
 #if defined(__ANDROID__)
 		// Keep running (paused by our own lifecycle gate) instead of blocking

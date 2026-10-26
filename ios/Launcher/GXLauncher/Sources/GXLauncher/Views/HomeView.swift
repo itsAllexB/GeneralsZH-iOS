@@ -16,13 +16,12 @@
 **	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// GeneralsX @feature iOS launcher 25/10/2026 Home: Play, launch options, the game folder chosen in
-// Files (Android's "Select game folder"), and copying a game folder into the app as the secondary
-// option (SetupActivity.buildHomeSection on Android).
+// GeneralsX @feature iOS launcher 25/10/2026 Home: Play, the game folder chosen in Files (Android's
+// "Select game folder") and the launch options (SetupActivity.buildHomeSection on Android).
 //
 // The published app ships without game data. Data source priority (LaunchPlanBuilder.gameDataSource):
-// the chosen folder > the copy inside the app > <App>/GameData (developer builds). Play is disabled
-// when there is none, and Home explains how to get the data.
+// the chosen folder (or one found in Documents) > <App>/GameData (developer builds). Play is
+// disabled when there is none, and Home explains how to get the data.
 
 #if canImport(UIKit) && os(iOS)
 import SwiftUI
@@ -31,13 +30,8 @@ import GXLauncherCore
 struct HomeView: View {
     @ObservedObject var model: LauncherModel
 
-    enum PickerPurpose: String, Identifiable {
-        case choose, copy
-        var id: String { rawValue }
-    }
-
-    @State private var picker: PickerPurpose?
-    @State private var confirmDelete = false
+    @State private var showPicker = false
+    @FocusState private var nameFocused: Bool
     @State private var confirmForget = false
 
     var body: some View {
@@ -58,31 +52,8 @@ struct HomeView: View {
                 noDataSection
             }
 
-            if let source = model.activeSource {
-                Section {
-                    LabeledContent(L("Playing from"), value: Self.sourceName(source))
-                    // The chosen folder's report is already shown in its own section.
-                    if case .external = source {
-                    } else if let report = model.activeReport {
-                        ReportSummary(report: report)
-                    } else if model.isValidating {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text(L("Checking game data…"))
-                        }
-                    }
-                    Button {
-                        model.validate()
-                    } label: {
-                        Label(L("Check again"), systemImage: "arrow.clockwise")
-                    }
-                    .disabled(model.isValidating)
-                } header: {
-                    Text(L("Game data"))
-                }
-            }
-
             Section {
+                playerNameRow
                 Toggle(isOn: Binding(get: { model.preferences.skipIntro }, set: model.setSkipIntro)) {
                     SettingLabel(title: L("Skip intro movies"),
                                  detail: L("EA logos, the intro and other movies before the menu are skipped; the game goes straight to loading."))
@@ -91,32 +62,29 @@ struct HomeView: View {
                     SettingLabel(title: L("Play sound in silent mode"),
                                  detail: L("Game sound plays even when the Ring/Silent switch is set to silent. Turn off to follow the switch. Other apps' audio keeps playing either way."))
                 }
+                Toggle(isOn: Binding(get: { model.controlScheme.cameraHigh }, set: model.setCameraHigh)) {
+                    SettingLabel(title: L("Allow higher camera"),
+                                 detail: L("The camera zooms out up to four times further than the map allows."))
+                }
+                // Only 60 Hz screens: nothing to choose, so no row (GX_FPS_LIMIT is still 60).
+                if model.frameRateChoices.count > 1 {
+                    frameRateRow
+                }
             } header: {
                 Text(L("Options"))
             }
-
-            importSection
         }
         .navigationTitle(LauncherInfo.appName)
-        .sheet(item: $picker) { purpose in
-            FolderPicker { url in
-                switch purpose {
-                case .choose: model.chooseGameFolder(url)
-                case .copy: model.startImport(from: url)
-                }
-            }
-            .ignoresSafeArea()
+        .refreshable { model.validate() }
+        .sheet(isPresented: $showPicker) {
+            FolderPicker { url in model.chooseGameFolder(url) }
+                .ignoresSafeArea()
         }
         .alert(L("Not a game folder"), isPresented: Binding(
             get: { model.pickError != nil }, set: { if !$0 { model.pickError = nil } })) {
             Button(L("OK"), role: .cancel) {}
         } message: {
             Text(model.pickError ?? "")
-        }
-        .confirmationDialog(L("Delete the copy inside the app?"), isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button(L("Delete copy"), role: .destructive) { model.removeImported() }
-        } message: {
-            Text(L("Your game folder in Files is not touched. You can copy a folder again at any time."))
         }
         .confirmationDialog(L("Forget this game folder?"), isPresented: $confirmForget, titleVisibility: .visible) {
             Button(L("Forget"), role: .destructive) { model.forgetGameFolder() }
@@ -134,12 +102,52 @@ struct HomeView: View {
         }
     }
 
-    static func sourceName(_ source: GameDataSource) -> String {
-        switch source {
-        case .external: return L("Chosen game folder")
-        case .imported: return L("Copy inside the app")
-        case .bundled: return L("Bundled with the app (developer build)")
+    // MARK: Player name
+
+    private var playerNameRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(L("Player Name")) {
+                // Bound straight to the model and filtered in onChange: a filtering Binding is not
+                // reflected by the text field while it is being edited.
+                TextField(L("Device name"), text: $model.playerName)
+                .multilineTextAlignment(.trailing)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .focused($nameFocused)
+                .onSubmit { model.commitPlayerName() }
+                .accessibilityIdentifier("gx.playerName")
+            }
+            Text(L("Your name in skirmish and LAN games. Up to 12 characters; empty uses the device name."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
+        .onChange(of: nameFocused) { focused in
+            if !focused { model.commitPlayerName() }
+        }
+        .onChange(of: model.playerName) { typed in
+            let allowed = PlayerName.filterTyping(typed)
+            if allowed != typed { model.playerName = allowed }
+        }
+    }
+
+    // MARK: Frame rate
+
+    private var frameRateRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("Frame Rate"))
+            Picker(L("Frame Rate"), selection: Binding(get: { model.frameRate }, set: model.setFrameRate)) {
+                ForEach(model.frameRateChoices, id: \.self) { fps in
+                    Text(L("%d fps", fps)).tag(fps)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            Text(L("The game itself always runs at 60 updates a second. 120 makes scrolling and animation smoother on ProMotion screens and uses more battery."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
     }
 
     // MARK: No game data yet
@@ -169,18 +177,27 @@ struct HomeView: View {
             switch model.externalStatus {
             case .none:
                 Button {
-                    picker = .choose
+                    showPicker = true
                 } label: {
                     Label(L("Choose game folder…"), systemImage: "folder.badge.gearshape")
                 }
                 .accessibilityIdentifier("gx.chooseFolder")
+                // Developer builds carry GameData in the bundle; say so and show its check.
+                if case .bundled? = model.activeSource {
+                    Label(L("Using the game data bundled with this developer build"), systemImage: "hammer")
+                        .font(.subheadline)
+                    if let report = model.bundledReport {
+                        ReportSummary(report: report)
+                    }
+                    checkAgainButton
+                }
             case .checking(let name):
                 folderHeader(name: name)
                 HStack(spacing: 12) {
                     ProgressView()
                     Text(L("Checking game data…"))
                 }
-                folderButtons
+                folderButtons(checkAgain: false)
             case .unavailable(let name, let reason):
                 folderHeader(name: name)
                 Label {
@@ -195,7 +212,7 @@ struct HomeView: View {
                 } icon: {
                     Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
                 }
-                folderButtons
+                folderButtons(checkAgain: true)
             case .waitingForICloud(let name, let pending, let total):
                 folderHeader(name: name)
                 VStack(alignment: .leading, spacing: 6) {
@@ -207,7 +224,7 @@ struct HomeView: View {
                     Text(L("The game can only start once every archive is on this iPhone. Keep the app open, or move the folder to On My iPhone."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-                folderButtons
+                folderButtons(checkAgain: false)
             case .ready(let report):
                 folderHeader(name: model.externalFolder?.lastPathComponent ?? "")
                 ReportSummary(report: report)
@@ -218,7 +235,7 @@ struct HomeView: View {
                         Image(systemName: "info.circle").foregroundStyle(.orange)
                     }
                 }
-                folderButtons
+                folderButtons(checkAgain: true)
             }
         } header: {
             Text(L("Game folder"))
@@ -240,10 +257,23 @@ struct HomeView: View {
         }
     }
 
-    @ViewBuilder
-    private var folderButtons: some View {
+    /// Checks the folder (and its files) again; pull to refresh does the same.
+    private var checkAgainButton: some View {
         Button {
-            picker = .choose
+            model.validate()
+        } label: {
+            Label(L("Check again"), systemImage: "arrow.clockwise")
+        }
+        .disabled(model.isValidating)
+    }
+
+    @ViewBuilder
+    private func folderButtons(checkAgain: Bool) -> some View {
+        if checkAgain {
+            checkAgainButton
+        }
+        Button {
+            showPicker = true
         } label: {
             Label(L("Change…"), systemImage: "folder.badge.gearshape")
         }
@@ -264,66 +294,6 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Copy into the app (secondary)
-
-    @ViewBuilder
-    private var importSection: some View {
-        Section {
-            switch model.importState {
-            case .copying(let progress):
-                VStack(alignment: .leading, spacing: 8) {
-                    ProgressView(value: progress.fraction) {
-                        Text(L("Copying game data…"))
-                    } currentValueLabel: {
-                        Text(L("%@ of %@",
-                               ByteCountFormatter.string(fromByteCount: progress.copiedBytes, countStyle: .file),
-                               ByteCountFormatter.string(fromByteCount: progress.totalBytes, countStyle: .file)))
-                    }
-                    if !progress.currentFile.isEmpty {
-                        Text(progress.currentFile)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                }
-                Button(L("Cancel copying"), role: .cancel) { model.cancelImport() }
-            case .failed(let message):
-                Label {
-                    Text(message)
-                } icon: {
-                    Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
-                }
-                copyButton(title: L("Try again…"))
-            case .idle:
-                if model.hasImportedData {
-                    if let report = model.importedReport {
-                        ReportSummary(report: report)
-                    }
-                    copyButton(title: L("Replace with another folder…"))
-                    Button(role: .destructive) {
-                        confirmDelete = true
-                    } label: {
-                        Label(L("Delete copy"), systemImage: "trash")
-                    }
-                } else {
-                    copyButton(title: L("Copy a game folder into the app…"))
-                }
-            }
-        } header: {
-            Text(L("Copy into the app instead"))
-        } footer: {
-            Text(L("Copies the whole game (about 2.7 GB) into the app's own storage, kept out of device backups. Used when no game folder is chosen above."))
-        }
-    }
-
-    private func copyButton(title: String) -> some View {
-        Button {
-            picker = .copy
-        } label: {
-            Label(title, systemImage: "square.and.arrow.down.on.square")
-        }
-    }
 }
 
 /// The big Play button. Disabled without game data; asks before starting with game data that
@@ -353,7 +323,7 @@ struct PlayButton: View {
             Button(L("Play anyway")) { model.play() }
             Button(L("Cancel"), role: .cancel) {}
         } message: {
-            Text(L("The game may fail to start or show missing textures. See Home > Game data for details."))
+            Text(L("The game may fail to start or show missing textures. See Home > Game folder for details."))
         }
     }
 }

@@ -26,8 +26,9 @@
 // Environment:
 //   GX_SETTINGS_DIR    always; the folder holding control_scheme, mouse_mode, logging_off, markers
 //   GX_GAME_DATA_DIR   the game data folder to chdir() into, by priority: the folder chosen in
-//                      Files > the copy imported into Application Support > <App>/GameData (dev
-//                      builds); unset when there is none
+//                      Files (or a game folder found in Documents) > <App>/GameData (dev builds);
+//                      unset when there is none
+//   GX_FPS_LIMIT       always: 60 or 120 (Home > Frame Rate; 120 only on 120 Hz screens)
 //   GX_UI_SCALE        Options.ini GXUiScale clamped to 70...200, when set and not 100 (100 is the
 //                      engine's default) -- GXUiScale.cpp reads this variable
 //                      directly (Android's SDL3Main.cpp copies it there from Options.ini; the iOS
@@ -39,6 +40,11 @@
 //   GENERALSX_BUNDLED_FONTS_DIR, DXVK_CONFIG_FILE
 //                      <App>/GameSupport/fonts and <App>/GameSupport/dxvk.conf, only when the
 //                      support files could not be copied into the game folder (read-only folder)
+//
+// gx_launcher_run() can run more than once per process (the launcher is shown again over the
+// running game, and the engine re-reads its settings). Variables a previous run set that the new
+// plan no longer contains are unset (LaunchPlanBuilder.apply), so switching something off takes
+// effect; variables the launcher never set (an Xcode scheme's) are left alone.
 
 import Foundation
 
@@ -50,10 +56,13 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     public var skipIntro: Bool = false
     /// "Play sound in silent mode": AVAudioSession .playback (on, default) or .ambient (off).
     public var playSoundInSilentMode: Bool = true
+    /// "Frame Rate": 60 (default) or 120 frames per second, see FrameRate.
+    public var frameRate: Int = FrameRate.defaultRate
 
-    public init(skipIntro: Bool = false, playSoundInSilentMode: Bool = true) {
+    public init(skipIntro: Bool = false, playSoundInSilentMode: Bool = true, frameRate: Int = FrameRate.defaultRate) {
         self.skipIntro = skipIntro
         self.playSoundInSilentMode = playSoundInSilentMode
+        self.frameRate = frameRate
     }
 
     public init(from decoder: Decoder) throws {
@@ -62,6 +71,7 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         skipIntro = try c.decodeIfPresent(Bool.self, forKey: .skipIntro) ?? false
         playSoundInSilentMode = try c.decodeIfPresent(Bool.self, forKey: .playSoundInSilentMode) ?? true
+        frameRate = try c.decodeIfPresent(Int.self, forKey: .frameRate) ?? FrameRate.defaultRate
     }
 
     public static func load(from file: URL) -> LauncherPreferences {
@@ -77,6 +87,28 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(self).write(to: file, options: .atomic)
+    }
+}
+
+// MARK: - Frame rate
+
+/// The display frame-rate cap, exported as GX_FPS_LIMIT. The game logic always runs at 60 updates
+/// per second; this only limits how often frames are drawn (120 is smoother on ProMotion screens
+/// and uses more battery).
+public enum FrameRate {
+    public static let variable = "GX_FPS_LIMIT"
+    public static let all = [60, 120]
+    public static let defaultRate = 60
+
+    /// The rates the screen can show: 120 only when it reaches 120 Hz.
+    public static func choices(maximumFramesPerSecond: Int) -> [Int] {
+        all.filter { $0 <= max(maximumFramesPerSecond, defaultRate) }
+    }
+
+    /// The rate to use for a saved value: anything else (an old 30, garbage) becomes 60, and so
+    /// does 120 on a screen that cannot show it.
+    public static func effective(_ saved: Int, maximumFramesPerSecond: Int) -> Int {
+        choices(maximumFramesPerSecond: maximumFramesPerSecond).contains(saved) ? saved : defaultRate
     }
 }
 
@@ -154,21 +186,21 @@ public enum LaunchPlanBuilder {
         return args
     }
 
-    /// Where the game data comes from, by priority: the folder chosen in Files (`externalFolder`,
-    /// already opened and checked by the caller) > the copy in Application Support > the bundle.
+    /// Where the game data comes from, by priority: the folder chosen in Files, or found in
+    /// Documents (`externalFolder`, already opened and checked by the caller) > the bundle.
     public static func gameDataSource(paths: LauncherPaths, externalFolder: URL?) -> GameDataSource? {
         if let externalFolder { return .external(externalFolder) }
-        let fm = FileManager.default
-        if fm.fileExists(atPath: paths.importedGameData.path) { return .imported(paths.importedGameData) }
-        if fm.fileExists(atPath: paths.bundledGameData.path) { return .bundled(paths.bundledGameData) }
+        if FileManager.default.fileExists(atPath: paths.bundledGameData.path) { return .bundled(paths.bundledGameData) }
         return nil
     }
 
     /// Everything the engine gets, from what is on disk now.
     /// `supportFallback`: the support files could not be put into the game folder, so point the
     /// engine at the bundle's copies instead.
+    /// `maximumFramesPerSecond`: the screen's (UIScreen.maximumFramesPerSecond), for GX_FPS_LIMIT.
     public static func plan(paths: LauncherPaths, preferences: LauncherPreferences, safeInsets: SafeInsets?,
-                            externalFolder: URL? = nil, supportFallback: Bool = false) -> LaunchPlan {
+                            externalFolder: URL? = nil, supportFallback: Bool = false,
+                            maximumFramesPerSecond: Int = FrameRate.defaultRate) -> LaunchPlan {
         var env: [(name: String, value: String)] = [(settingsDirVariable, paths.settingsDir.path)]
         if let source = gameDataSource(paths: paths, externalFolder: externalFolder) {
             env.append((gameDataDirVariable, source.url.path))
@@ -186,6 +218,8 @@ public enum LaunchPlanBuilder {
             }
         }
         env.append((audioCategoryVariable, preferences.playSoundInSilentMode ? "playback" : "ambient"))
+        let fps = FrameRate.effective(preferences.frameRate, maximumFramesPerSecond: maximumFramesPerSecond)
+        env.append((FrameRate.variable, String(fps)))
         if supportFallback {
             env.append((bundledFontsVariable, paths.bundledSupport.appendingPathComponent("fonts").path))
             env.append((dxvkConfigVariable, paths.bundledSupport.appendingPathComponent("dxvk.conf").path))
@@ -193,27 +227,39 @@ public enum LaunchPlanBuilder {
         return LaunchPlan(arguments: arguments(preferences: preferences, safeInsets: safeInsets), environment: env)
     }
 
-    /// setenv() for every variable of the plan (overwriting).
-    public static func apply(_ plan: LaunchPlan) {
+    /// setenv() for every variable of the plan (overwriting), and unsetenv() for any variable an
+    /// earlier apply() in this process set that this plan no longer has.
+    /// Returns the names it unset.
+    @discardableResult
+    public static func apply(_ plan: LaunchPlan) -> [String] {
+        appliedLock.lock(); defer { appliedLock.unlock() }
+        let names = Set(plan.environment.map(\.name))
+        let stale = applied.subtracting(names).sorted()
+        for name in stale {
+            unsetenv(name)
+        }
         for (name, value) in plan.environment {
             setenv(name, value, 1)
         }
+        applied = names
+        return stale
     }
+
+    private static let appliedLock = NSLock()
+    nonisolated(unsafe) private static var applied = Set<String>()
 }
 
 // MARK: - Data source
 
 public enum GameDataSource: Equatable, Sendable {
-    /// The folder the player chose in Files (security-scoped, bookmarked).
+    /// The folder the player chose in Files, or a game folder found in Documents (bookmarked).
     case external(URL)
-    /// The copy in Application Support/GeneralsX/ImportedGameData.
-    case imported(URL)
     /// <App>.app/GameData (dev builds).
     case bundled(URL)
 
     public var url: URL {
         switch self {
-        case .external(let url), .imported(let url), .bundled(let url): return url
+        case .external(let url), .bundled(let url): return url
         }
     }
 
@@ -250,7 +296,8 @@ public enum LaunchPreparation {
     }
 
     public static func prepare(paths: LauncherPaths, preferences: LauncherPreferences,
-                               safeInsets: SafeInsets?) -> Outcome {
+                               safeInsets: SafeInsets?,
+                               maximumFramesPerSecond: Int = FrameRate.defaultRate) -> Outcome {
         _ = try? paths.ensureSettingsDir()
         let external = usableExternalFolder(paths: paths)
         let source = LaunchPlanBuilder.gameDataSource(paths: paths, externalFolder: external.folder)
@@ -261,7 +308,8 @@ public enum LaunchPreparation {
         seedOptionsIfMissing(paths: paths, dataFolder: source?.url)
         let fallback = support.map { $0.hadSupport && !$0.complete } ?? false
         let plan = LaunchPlanBuilder.plan(paths: paths, preferences: preferences, safeInsets: safeInsets,
-                                          externalFolder: external.folder, supportFallback: fallback)
+                                          externalFolder: external.folder, supportFallback: fallback,
+                                          maximumFramesPerSecond: maximumFramesPerSecond)
         return Outcome(plan: plan, source: source, support: support, folderState: external.state,
                        pendingDownloads: external.pending)
     }

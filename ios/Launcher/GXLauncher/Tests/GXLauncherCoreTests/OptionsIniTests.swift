@@ -137,4 +137,23 @@ final class OptionsIniTests: XCTestCase {
         XCTAssertEqual(MenuTextSize.read(OptionsIniDocument(text: "ResolutionFontAdjustment = 999\n")), 150)
         XCTAssertEqual(MenuTextSize.read(OptionsIniDocument(text: "ResolutionFontAdjustment = 85.000000\n")), 85)
     }
+
+    func testMenuTextSizeStepAndRoundTrip() throws {
+        XCTAssertEqual(MenuTextSize.step, 10)
+        XCTAssertEqual(MenuTextSize.clamp(84), 80)
+        XCTAssertEqual(MenuTextSize.clamp(86), 90)
+        XCTAssertEqual(MenuTextSize.clamp(-5), 0)
+        XCTAssertEqual(MenuTextSize.clamp(155), 150)
+        // Every slider value round-trips through Options.ini.
+        let home = try TempHome()
+        let store = OptionsIniStore(file: home.paths.optionsIni, defaults: nil)
+        for value in stride(from: 0, through: 150, by: 10) {
+            try store.update { $0.set(MenuTextSize.key, String(MenuTextSize.clamp(value))) }
+            XCTAssertEqual(MenuTextSize.read(store.load()), value)
+        }
+        // A value off the step (written by the in-game menu) is read as stored, not rewritten.
+        try store.update { $0.set(MenuTextSize.key, "85") }
+        XCTAssertEqual(MenuTextSize.read(store.load()), 85)
+        XCTAssertEqual(store.load().value(for: MenuTextSize.key), "85")
+    }
 }

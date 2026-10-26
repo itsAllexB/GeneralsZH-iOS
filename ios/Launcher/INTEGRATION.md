@@ -12,7 +12,7 @@ ios/Launcher/
     Sources/GXLauncherCore/   Foundation-only logic (Options.ini, control_scheme, BIG validator, ...)
     Sources/GXLauncher/       SwiftUI screens, the UIWindow runner, @_cdecl entry point
     Sources/GXLauncher/Resources/Localizable.xcstrings   String Catalog (English)
-    Tests/GXLauncherCoreTests/  53 XCTest cases
+    Tests/GXLauncherCoreTests/  63 XCTest cases
   HostApp/                    XcodeGen test host that calls gx_launcher_run() the way SDL does
   scripts/                    run-host.sh, make-fake-gamedata.py, gen-strings.py
   screenshots/                simulator screenshots (iPhone 18 Pro Max, iOS 27.0)
@@ -43,8 +43,12 @@ const char *const *gx_launcher_run(void);
 * **Memory:** owned by GXLauncher, valid until the next call of `gx_launcher_run()` (which frees
   the previous array) or process exit. Do not free or modify. Pointing argv entries at them is fine.
 * **Off the main thread:** shows no UI, applies the saved settings and returns (no safe insets).
+* **Called again:** safe; each call shows a fresh launcher and re-applies the environment (stale
+  variables from the previous call are unset, see section 3). The previous call's array stays
+  valid until this call returns.
 * **Development switches:** `GX_LAUNCHER_SKIP=1` (no UI, saved settings only),
-  `GX_LAUNCHER_SECTION=home|interface|tools|help|logs` (open on that screen).
+  `GX_LAUNCHER_SECTION=home|interface|tools|help|logs` (open on that screen),
+  `GX_LAUNCHER_MAX_FPS=120` (pretend a 120 Hz screen; the simulator reports 60).
 
 Example for SDL3Main.cpp (iOS block):
 
@@ -155,7 +159,8 @@ Swift runtime notes:
 | Variable | When | Value | Engine reader |
 |---|---|---|---|
 | `GX_SETTINGS_DIR` | always (created if missing) | `$HOME/Library/Application Support/GeneralsX/launcher` | control_scheme, mouse_mode, logging_off, mods_active.txt (engine side, per coordinator) |
-| `GX_GAME_DATA_DIR` | when any game data is available | by priority: the folder chosen in Files > `$HOME/Library/Application Support/GeneralsX/ImportedGameData` > `<App>.app/GameData` (dev builds); see section 3a | SDL3Main.cpp `chdir()`s here |
+| `GX_GAME_DATA_DIR` | when any game data is available | by priority: the folder chosen in Files (or a game folder found in the app's Documents) > `<App>.app/GameData` (dev builds); see section 3a | SDL3Main.cpp `chdir()`s here |
+| `GX_FPS_LIMIT` | always | `60` (default) or `120` (Home > Options > Frame Rate; 120 only when the screen's `maximumFramesPerSecond` >= 120, a saved 120 or old 30 falls back to 60) | engine frame limiter (the simulation stays at 60 Hz) |
 | `GX_UI_SCALE` | Options.ini has `GXUiScale` and it is not 100 | clamped to 70..200, e.g. `70`, `140` | `GXUiScale::userScale()` (accepts 70..300, shrinks below 100) |
 | `GX_TRACE` | Tools > Verbose trace log on | `1` | GXTrace.h (also checks `gx_trace.txt` in CWD) |
 | `GX_PERF` | Tools > Performance summary on | `1` | GXTrace.h |
@@ -178,12 +183,15 @@ expects inside the game folder); developer builds may still carry `<App>.app/Gam
 
 Priority for `GX_GAME_DATA_DIR` (`LaunchPlanBuilder.gameDataSource`, `LaunchPreparation.prepare`):
 
-1. **The folder chosen in Files** (Home > Game folder > Choose game folder…) -- used when its
-   bookmark resolves, the folder exists, it has INIZH.big or INI.big at the top, and no `.big`
-   archive is still waiting for iCloud Drive. Integrity problems (missing base archives, ...) do
-   not disqualify it; Play asks "Play anyway?" as before.
-2. **The copy inside the app** (Home > Copy into the app instead) in `ImportedGameData/`.
-3. **`<App>.app/GameData`** (developer builds).
+1. **The folder chosen in Files** (Home > Game folder > Choose game folder…), or, when none was
+   chosen, a game folder found in the app's own Documents (copied there with Finder; adopted
+   automatically unless the player chose Forget for it) -- used when its bookmark resolves, the
+   folder exists, it has INIZH.big or INI.big at the top, and no `.big` archive is still waiting
+   for iCloud Drive. Integrity problems (missing base archives, ...) do not disqualify it; Play
+   asks "Play anyway?" as before.
+2. **`<App>.app/GameData`** (developer builds).
+
+(The earlier "Copy into the app" option and its `ImportedGameData/` folder are gone.)
 
 With none of them, Play is disabled and Home explains how to get the data (own copy of Zero Hour,
 copy the game folder to Files › On My iPhone, Choose game folder).
@@ -209,8 +217,8 @@ requested with `startDownloadingUbiquitousItem`; Home shows "Waiting for iCloud 
 all are local. The UI recommends a folder in On My iPhone (iOS may evict iCloud downloads).
 
 **Support files.** Before returning (and already when the folder is checked, so problems show on
-Home), every file below `<App>.app/GameSupport` is mirrored into the game folder in use (chosen
-folder or the copy in the app; never the read-only bundle), creating subfolders. A file is written
+Home), every file below `<App>.app/GameSupport` is mirrored into the chosen game folder (never
+the read-only bundle), creating subfolders. A file is written
 only when missing or different (size, then bytes); nothing is ever deleted. If any file cannot be
 written (read-only folder), the launcher logs a warning, shows a non-blocking notice on Home
 ("Window layouts will be missing"), and sets `GENERALSX_BUNDLED_FONTS_DIR` and `DXVK_CONFIG_FILE`
@@ -220,8 +228,12 @@ to the bundle's copies. Window overrides cannot be redirected that way.
 `<App>.app/GameSupport/DefaultOptions.ini` (falling back to the data folder's), both by the
 settings screens and right before returning.
 
-Variables are only ever set (overwrite = 1), never unset, so values given in an Xcode scheme for
-debugging still work when the switch is off. `GX_NET_TRACE` (Android's online trace) is not exposed.
+Variables are set with overwrite = 1. `gx_launcher_run()` can run again in the same process (the
+launcher shown over the running game; the engine then re-reads control_scheme, mouse_mode,
+logging_off and GX_UI_SCALE): a variable an earlier run set that the new plan no longer contains
+(a diagnostic switched off, Interface Size back to 100) is **unset**, so the change takes effect.
+Variables the launcher never set (an Xcode scheme's, for debugging) are never touched.
+`GX_NET_TRACE` (Android's online trace) is not exposed.
 
 ## 4. Files written
 
@@ -230,13 +242,13 @@ All under the app's home directory; formats are byte-compatible with the Android
 | File | Format | Android source |
 |---|---|---|
 | `Library/Application Support/GeneralsX/GeneralsZH/Options.ini` | engine `key = value` lines; see below | `SetupActivity.writeKeyValueFile` |
-| `$GX_SETTINGS_DIR/control_scheme` | `attack_move=1\narmy_buttons=0\ncamera_high=1\n` (always all three keys, in this order); **deleted** for Classic | `writeControlScheme`, `GXControlScheme.h` |
+| `$GX_SETTINGS_DIR/control_scheme` | `attack_move=1\narmy_buttons=0\ncamera_high=1\nminimap_camera=0\n` (always all four keys, in GXControlScheme.h's order, then any unknown lines found in the file); **deleted** when all are off and there is nothing unknown to keep. Presets: Classic = attack_move, army_buttons, minimap_camera off; Tactical = all three on. `camera_high` is Home > Options > Allow higher camera and is never changed by a preset. A missing key reads as off (an Android-era Tactical file therefore shows as Custom) | `writeControlScheme`, `GXControlScheme.h` |
 | `$GX_SETTINGS_DIR/mouse_mode` | present = pointer mode; content = cursor percent, no newline (`"100"`), 50..200 step 10; deleted when off | `writeMouseMode`, `GXMouseMode.h` |
 | `$GX_SETTINGS_DIR/logging_off` | empty; present = "Collect logs" **off** | `LOGGING_OFF_MARKER`, `GXLogging.h` |
 | `$GX_SETTINGS_DIR/gx_trace.txt`, `gx_perf.txt`, `gx_audio_trace.txt`, `gx_touch_debug.txt` | empty markers (persistence; the env vars above are what take effect) | `DIAGNOSTIC_MARKERS` |
-| `$GX_SETTINGS_DIR/launcher_prefs.json` | launcher-only: `{"skipIntro":bool,"playSoundInSilentMode":bool}` (sound defaults to `true` when absent; an older `preferImportedData` key is ignored) | SharedPreferences |
+| `$GX_SETTINGS_DIR/launcher_prefs.json` | launcher-only: `{"skipIntro":bool,"playSoundInSilentMode":bool,"frameRate":60\|120}` (sound defaults to `true`, frame rate to 60 when absent; an older `preferImportedData` key is ignored) | SharedPreferences |
+| `Library/Application Support/GeneralsX/GeneralsZH/Skirmish.ini` and `Network.ini` | `UserName = <name>` (Home > Options > Player Name), written when the field is committed and on Play into both files (created when missing, other lines kept, an existing UserName replaced); nothing is written for an empty name, so the game keeps its host-name fallback. The value is the game's quoted-printable UTF-16 form (QuotedPrintable.cpp): per UTF-16 unit the low then the high byte, ASCII `[0-9A-Za-z]` literal, any other byte `_HH` -- "Al" -> `A_00l_00`. Up to 12 UTF-16 units (`g_lanPlayerNameLength`), letters/digits/space/common punctuation, trimmed. The field shows Skirmish.ini's name, else Network.ini's, read every time the launcher appears (the game writes both files itself) | -- |
 | `$GX_SETTINGS_DIR/game_folder.json` | the chosen game folder (section 3a) | `gamedata_path.txt` |
-| `Library/Application Support/GeneralsX/ImportedGameData/` | copy of a game folder made in the app (excluded from backup) | -- |
 | `<game folder>/fonts/`, `Window/`, `dxvk.conf`, `DefaultOptions.ini` | mirrored from `<App>.app/GameSupport` (section 3a) | `copyBundledRuntimeIfMissing`, `syncEngineWindowOverrides` |
 
 Files read: `Documents/generals-stderr.log`, `Documents/generals-stderr-prev.log` (log viewer:
@@ -248,7 +260,7 @@ first 60,000 + last 140,000 bytes shown, Share sends the whole file, Clear delet
 | Key | UI | Range / step | Default shown | Notes |
 |---|---|---|---|---|
 | `GXUiScale` | Interface > Interface Size | 70..200, step 10 | 100 (missing/unparsable) | clamped on read (Android's slider starts at 100; iOS can shrink to 70) |
-| `ResolutionFontAdjustment` | Interface > Menu Text Size | 0..150, step 1 | 70 (missing, unparsable or negative) | the in-game Options menu writes -100 for "default"; shown as 70 |
+| `ResolutionFontAdjustment` | Interface > Menu Text Size | 0..150, step 10 (Android: 1) | 70 (missing, unparsable or negative) | the in-game Options menu writes -100 for "default"; shown as 70. A stored value off the step (e.g. 85) is shown as is and only rewritten when the slider moves |
 
 Editing is **line-preserving**: only the value on the line(s) carrying the key changes (the key
 text and the spacing after `=` are kept; every duplicate is updated, since the engine's map keeps
@@ -306,12 +318,6 @@ the engine could instead call SDL3's `SDL_GetWindowSafeArea()` once the window i
 * **Sliders apply immediately** (Android had Apply buttons); every change is written atomically.
 * **Play with bad data** asks "Play anyway?" instead of refusing.
 * **Mouse and touchpad** (Android puts it in the control-scheme card) is included.
-* **Copy into the app:** copied to a `.partial` folder and swapped in only when complete; a parent
-  folder is accepted like for "Choose game folder"; rejected if it has neither INIZH.big nor
-  INI.big; free space checked first; hidden files and `._*` skipped; the GameSupport files are
-  mirrored in (dev builds without GameSupport: the bundled GameData's `DefaultOptions.ini`,
-  `dxvk.conf`, `fonts/`, as Android's `copyBundledRuntimeIfMissing`). The old "Use imported game
-  data" switch is gone: the source follows the fixed priority of section 3a.
 * **Chosen folder vs Android:** Android stores an absolute path (it has all-files access); iOS needs
   the security-scoped bookmark. A read-only chosen folder is still played from (with the bundle's
   fonts/dxvk.conf); Android would fail to copy and carry on the same way.
@@ -348,7 +354,8 @@ be a sibling of `ControlScheme` in `SettingsFiles.swift`, and its env/argument e
   folder > nested detection > bookmark > support files > Play), but the simulator does not enforce
   the sandbox, so security-scoped access across launches is only verified on a real device.
   iCloud was simulated with `.icloud` placeholders; real iCloud Drive downloads are unverified.
-* "Copy into the app" is verified by unit tests, not by driving the picker.
+* The Frame Rate row only appears on 120 Hz screens; the simulator reports 60, so it was checked
+  there with the development override `GX_LAUNCHER_MAX_FPS=120`.
 * The iPhone Duo inner display was not tested (runtime not installed); layout keys only on size
   classes. The iPhone 18 Pro Max reports regular width in landscape, so both layouts were exercised.
 * The simulator was sluggish throughout (stock Settings also took seconds to draw), so input
