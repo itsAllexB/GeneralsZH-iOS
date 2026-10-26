@@ -149,6 +149,11 @@ function(GetGitState _working_dir)
         if(exit_code EQUAL 0)
             set(ENV{GIT_AUTHOR_NAME} "${output}")
         endif()
+        # GeneralsX @build iOS port 26/10/2026 Published builds (an IPA on GitHub) need not carry the
+        # name of whoever made the last commit: GX_GIT_AUTHOR_NAME replaces it in the version text.
+        if(DEFINED ENV{GX_GIT_AUTHOR_NAME})
+            set(ENV{GIT_AUTHOR_NAME} "$ENV{GX_GIT_AUTHOR_NAME}")
+        endif()
 
         RunGitCommand(show -s "--format=%ae" ${object})
         if(exit_code EQUAL 0)

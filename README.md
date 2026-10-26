@@ -1,49 +1,81 @@
 # Command & Conquer Generals: Zero Hour — iPhone, iPad & iPhone Duo
 
 The real 2003 Zero Hour engine running natively on iOS and iPadOS — no emulation.
-DirectX 8 is translated to Vulkan by [DXVK](https://github.com/doitsujin/dxvk) and
-to Metal by [MoltenVK](https://github.com/KhronosGroup/MoltenVK); SDL3 handles the
-window, input and lifecycle.
+**Optimized for the iPhone Duo**: full-screen on its inner display, with touch controls,
+interface sizing and a launcher made for it — and it runs on other iPhones and iPads too.
 
-This repository is the iOS-focused continuation of two earlier ports:
+DirectX 8 is translated to Vulkan by [DXVK](https://github.com/doitsujin/dxvk) and to Metal
+by [MoltenVK](https://github.com/KhronosGroup/MoltenVK); SDL3 handles the window, input and
+lifecycle. This repository continues the
+**Android port** ([MYSOREZ/GeneralsZH-Android-Port](https://github.com/MYSOREZ/GeneralsZH-Android-Port)),
+which it is forked from, and the earlier
+**macOS / iOS / iPadOS port** ([ammaarreshi/Generals-Mac-iOS-iPad](https://github.com/ammaarreshi/Generals-Mac-iOS-iPad))
+that the Android port grew out of.
 
-- the **Android port** ([MYSOREZ/GeneralsZH-Android-Port](https://github.com/MYSOREZ/GeneralsZH-Android-Port)),
-  which this repo is forked from — its native touch controls, interface scaling,
-  Extras menu and army column all carry over to iOS;
-- the **macOS / iOS / iPadOS port** ([ammaarreshi/Generals-Mac-iOS-iPad](https://github.com/ammaarreshi/Generals-Mac-iOS-iPad)),
-  which the Android port itself grew out of.
+**No game assets are included or distributed.** You need your own copy of Zero Hour
+([Steam](https://store.steampowered.com/app/2732960/)): copy its folder to the device and
+choose it in the launcher.
 
-What this repo adds on top is everything needed to build and run on **iOS 27 /
-Xcode 27** and on Apple's foldable **iPhone Duo**, plus a native iOS launcher.
+## Features
 
-**No game assets are included or distributed.** You need your own copy of
-Zero Hour ([Steam](https://store.steampowered.com/app/2732960/)). The app ships without
-game data: copy your Zero Hour folder to the device and choose it in the launcher, as
-on Android.
+- **Optimized for the iPhone Duo** — fills the inner display in landscape, ProMotion
+  120 fps, an interface you can size from 70 % to 200 %, and a launcher with a sidebar
+  layout for the wide screen.
+- **Native touch controls** — tap to select and order, drag to pan with momentum, pinch to
+  zoom, twist to rotate, hold-and-drag for a selection box, aim abilities with your finger,
+  and a minimap you can tap or drag to move the camera (see [Touch controls](#touch-controls)).
+- **60 fps gameplay** — the game simulates at 60 Hz (the Windows GeneralsOnline rate);
+  **120 fps** drawing on ProMotion screens.
+- **Native iOS launcher** — choose your game folder, check the game data, player name,
+  interface size, control scheme (Classic / Tactical / your own mix), frame rate, sound in
+  silent mode, logs and diagnostics (see [Launcher](#launcher)).
+- **Back to the launcher** — Exit Game, or **QUIT TO LAUNCHER** in the pause menu, opens the
+  launcher over the running game; Play takes you back.
+- **Your game folder stays yours** — the app is ~22 MB; it reads Zero Hour from a folder on
+  the device (copied with Finder, or anywhere in Files).
+- **Game sound in silent mode** (on by default), and system edge swipes that need a second
+  swipe, so a palm on the edge doesn't interrupt a match.
+- **Landscape** on iPhones and iPads (both directions); the iPhone Duo's inner display, which
+  ignores orientation locks, keeps every orientation.
 
-The Android documentation (online play, Android builds, the Android launcher) is
-kept in [`README.android.md`](README.android.md).
+## Install
+
+1. Download `GeneralsZH-iOS.ipa` from the [Releases](https://github.com/itsAllexB/GeneralsZH-iOS/releases)
+   page.
+2. Install it with a sideloading tool that signs it with your own Apple ID — SideStore,
+   AltStore, Sideloadly, LiveContainer — or build and sign it yourself (see [Building](#building)).
+3. Copy your Zero Hour folder to the device (see [Game data](#game-data)), open **Generals ZH**
+   and tap **Play**.
+
+Requires iOS 17 or later.
 
 ## Status
 
 | | |
 |---|---|
+| Version | 1.0 |
 | Tested on | iPhone Duo, iOS 27.2 (inner display, landscape) |
-| Minimum iOS | 17.0 |
-| Works | Main menu, skirmish matches, native touch controls (pan, zoom, selection, orders, command-bar buttons) |
+| Should work | Other iPhones and iPads on iOS 17+ (not tested yet) |
+| Works | Main menu, skirmish matches, native touch controls, launcher, 60/120 fps |
 | Not on iOS | GeneralsOnline multiplayer (the client is compiled in, but not set up or tested on iOS) |
-| Launcher | Native SwiftUI launcher — see [Launcher](#launcher) |
 
-## What's new compared to the earlier ports
+The Android documentation (online play, Android builds, the Android launcher) is kept in
+[`README.android.md`](README.android.md).
+
+## Under the hood — changes compared to the earlier ports
 
 - **iOS 27 SDK support.** Apps built with the iOS 27 SDK must use the UIScene life
-  cycle or iOS terminates them at launch; the app now declares SDL's scene delegate.
+  cycle or iOS terminates them at launch; the app declares SDL's scene delegate.
   SDL3 is taken from its `release-3.4.x` branch, which fixes windows keeping a
   portrait size when launched in landscape and lost focus events with the iOS 27 SDK
   ([libsdl-org/SDL#16436](https://github.com/libsdl-org/SDL/issues/16436)).
-- **iPhone Duo.** Built against the iOS 27.1 SDK the game fills the inner display.
-  The inner display ignores orientation locks, so the app is resizable and allows
-  all orientations; the engine always picks a landscape resolution.
+- **iPhone Duo.** Built against the iOS 27.1 SDK the game fills the inner display. The
+  inner display ignores orientation locks, so Info.plist allows every orientation and the
+  launcher limits every other device to landscape at run time (`SDL_IOS_ORIENTATIONS`); the
+  engine always picks a landscape resolution.
+- **System edge gestures deferred** (`SDL_HINT_IOS_HIDE_HOME_INDICATOR=2`): a finger or palm
+  resting on an edge made iOS start a home / Control Center swipe and took the game out of
+  the active state for seconds at a time.
 - **Touch on letterboxed screens.** When the game's aspect ratio differs from the
   screen's, touches were mapped with a pixel density of 1 instead of the screen's
   (~2.8–3×), so taps landed at about a third of their position. Fixed in
@@ -55,17 +87,18 @@ kept in [`README.android.md`](README.android.md).
   scheme, mouse mode, logging, managed mods) come from `$GX_SETTINGS_DIR` on iOS
   ([`GXSettingsPath.h`](Core/GameEngine/Include/Common/GXSettingsPath.h)), and the
   port's extra window layouts (army column, Extras menu) are bundled.
-- **File picker.** The app no longer declares open-in-place: combined with file
+- **60 Hz simulation** (`SAGE_HIGH_FPS_SIM`, the Android port's "60 fps" build): replays
+  recorded by the original 30 Hz game do not play back on it. **120 fps** draws at least
+  120 frames a second while the logic keeps the frame limit's rate (`FramePacer`).
+- **Launcher over the running game.** The engine is started once per process (it keeps
+  statics that only hold for its first start); leaving the game shows the launcher on
+  top, and the settings readers pick up its changes.
+- **File picker.** The app does not declare open-in-place: combined with file
   sharing it leaves the system document picker stuck on an empty Recents page in
   re-signed apps on iOS 27.2.
 - **Apple Pencil** no longer also produces mouse events.
-- **60 Hz simulation** (the Android port's "60 fps" option, built in): the game updates and
-  draws 60 times a second at normal speed instead of 30. It is the rate of the Windows
-  GeneralsOnline client; replays recorded by the original 30 Hz game do not play back on it.
-- **Back to the launcher**: Exit Game in the main menu, or **Quit to Launcher** in the
-  pause menu, returns to the launcher instead of closing the app.
-- **Native launcher** (see below), and the system allocator instead of the game's memory
-  pool, which is not thread-safe and crashed Apple's text rendering inside the process.
+- **System allocator** instead of the game's memory pool, which is not thread-safe and
+  crashed Apple's text rendering inside the process.
 - **iOS Simulator build** (optional, `cmake/triplets/arm64-ios-simulator.cmake`):
   it builds, but cannot render — the simulator's GPU lacks a Vulkan 1.2 feature
   DXVK requires.
@@ -100,7 +133,8 @@ lets you set up the game. It adapts to the screen: a tab bar on narrow screens, 
 on iPad and the iPhone Duo's inner display.
 
 - **Home** — Play; **Choose game folder** (see below) with a check of the game data (every
-  `.big` archive and the files the game needs at startup); skip the intro movies; **Play
+  `.big` archive and the files the game needs at startup); **Player Name** (skirmish and
+  LAN, up to 12 characters); skip the intro movies; **Play
   sound in silent mode** (on by default — off follows the ring/silent switch); **Allow
   higher camera**; **Frame Rate** 60 or 120 fps (120 on ProMotion screens: the game still
   updates 60 times a second, scrolling and animation are drawn at 120).
@@ -180,6 +214,8 @@ GX_TEAM_ID=<your team id> GX_BUNDLE_ID=com.you.generalszh \
 - `--install` uses the first paired iPhone or iPad (USB or Wi-Fi); `GX_DEVICE=<name or id>`
   picks another.
 - With a free account the app expires after 7 days; a paid account gives a year.
+- Release builds: `GX_GIT_AUTHOR_NAME=<name>` replaces the last commit's author in the game's
+  version text.
 
 ### Unsigned IPA (for SideStore, AltStore, LiveContainer …)
 
