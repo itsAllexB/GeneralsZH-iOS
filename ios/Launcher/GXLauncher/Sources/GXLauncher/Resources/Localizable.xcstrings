@@ -122,6 +122,17 @@
         }
       }
     },
+    "A Bluetooth or USB keyboard and mouse work as on a PC. On an iPhone, turn on AssistiveTouch (Settings › Accessibility › Touch) for the mouse: iOS gives apps a mouse only through it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Bluetooth or USB keyboard and mouse work as on a PC. On an iPhone, turn on AssistiveTouch (Settings › Accessibility › Touch) for the mouse: iOS gives apps a mouse only through it."
+          }
+        }
+      }
+    },
     "A folder on this iPhone (Files › On My iPhone) is recommended. Folders in iCloud Drive work too, but every file must be downloaded first, and the system may remove downloaded copies to free space.": {
       "extractionState": "manual",
       "localizations": {
@@ -712,6 +723,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "It may have been moved, renamed or deleted, or the drive is not connected. Choose it again."
+          }
+        }
+      }
+    },
+    "Keyboard and mouse": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keyboard and mouse"
           }
         }
       }

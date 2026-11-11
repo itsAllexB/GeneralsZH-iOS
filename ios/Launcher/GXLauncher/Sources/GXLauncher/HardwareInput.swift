@@ -74,6 +74,10 @@ final class HardwareInput {
     private var textWanted = false
     private let catcher = HardwareKeyCatcher()
     private var movesLogged = 0
+    private var buttonsLogged = 0
+    private var connectedSince: TimeInterval?
+    private var motionSeen = false
+    private var hintLogged = false
 
     private static func log(_ message: String) { LauncherRunner.log("hardware input: \(message)") }
 
@@ -135,6 +139,7 @@ final class HardwareInput {
             MainActor.assumeIsolated { HardwareInput.shared.scrolled(Double(first), Double(second)) }
         }
         Self.mouseConnected = true
+        if connectedSince == nil { connectedSince = ProcessInfo.processInfo.systemUptime }
         ExternalDisplay.shared.pointerLockPreferenceChanged()
     }
 
@@ -149,6 +154,7 @@ final class HardwareInput {
     }
 
     private func moved(_ dx: Double, _ dy: Double) {
+        motionSeen = true
         let height = Double(ExternalDisplay.shared.gamePoints.height)
         let p = MouseMotion.points(deltaX: dx, deltaY: dy, windowHeight: height)
         if movesLogged < 4 {
@@ -159,6 +165,12 @@ final class HardwareInput {
     }
 
     private func button(_ button: Int, mouse: Int, pressed: Bool) {
+        // Whether GameController reports the buttons at all with AssistiveTouch on is what this says
+        // on a device (an iPhone presses them as touches too, GXMouseTouch.h).
+        if buttonsLogged < 12 {
+            buttonsLogged += 1
+            Self.log("GameController button \(button) \(pressed ? "down" : "up")")
+        }
         guard let down = buttons.change(button: button, mouse: mouse, pressed: pressed) else { return }
         mouseCallback?((down ? HardwareMouseKind.buttonDown : .buttonUp).rawValue, UInt64(button), 0, 0)
     }
@@ -172,6 +184,14 @@ final class HardwareInput {
     // MARK: - Each frame
 
     func update() {
+        // A mouse that GameController lists but never moves: on an iPhone that is a mouse without
+        // AssistiveTouch (which iOS needs to give apps a mouse there). Said once in the log.
+        if let since = connectedSince, !motionSeen, !hintLogged,
+           ProcessInfo.processInfo.systemUptime - since > 10,
+           UIApplication.shared.applicationState == .active {
+            hintLogged = true
+            Self.log("a mouse is connected but iOS sends no motion: on an iPhone turn on AssistiveTouch (Settings > Accessibility > Touch)")
+        }
         // SDL installs its own handlers (on its own queue) when it sees a mouse connect; take it back.
         for mouse in GCMouse.mice() where mouse.handlerQueue !== DispatchQueue.main || !mice.contains(where: { $0 === mouse }) {
             attach(mouse)

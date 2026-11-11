@@ -64,6 +64,7 @@
 #include "Common/GXMouseMode.h"
 #include "Common/GXExternalDisplay.h"
 #include "GameClient/HeaderTemplate.h"
+#include "SDL3Device/GameClient/GXMouseTouch.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <cstdio>
@@ -1263,6 +1264,91 @@ static Bool handleHardwareMouseEvent(SDL_Window *window, const SDL_Event &event)
 	default:
 		return FALSE;
 	}
+}
+
+// GeneralsX @feature iOS port 11/11/2026 Touches that are a mouse's buttons (GXMouseTouch.h): an
+// iPhone gives apps a mouse only through AssistiveTouch, which presses its buttons as touches.
+namespace
+{
+	int s_mouseTouchLogged = 0;
+
+	class MouseTouchSink : public GXMouseTouch::Sink<SDL_Event>
+	{
+	public:
+		SDL3GameEngine *engine = nullptr;
+		SDL_Window *window = nullptr;
+
+		virtual void forward(const SDL_Event &event) override
+		{
+			if (engine != nullptr) {
+				engine->processFingerEvent(event);
+			}
+		}
+
+		virtual void button(int button, bool down, GXMouseTouch::Source source) override
+		{
+			if (window == nullptr) {
+				return;
+			}
+			if (s_mouseTouchLogged < 16) {
+				++s_mouseTouchLogged;
+				fprintf(stderr, "INFO: hardware mouse: button %d %s, from %s\n", button, down ? "down" : "up",
+				        source == GXMouseTouch::SOURCE_TOUCH ? "a touch (AssistiveTouch)" : "GameController");
+			}
+			SDL_Event e;
+			SDL_zero(e);
+			e.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+			e.button.timestamp = SDL_GetTicksNS();
+			e.button.windowID = SDL_GetWindowID(window);
+			e.button.which = GX_HARDWARE_MOUSE_ID;
+			e.button.button = (Uint8)button;
+			e.button.down = down;
+			e.button.clicks = 1;
+			handleHardwareMouseEvent(window, e);
+		}
+
+		virtual void pointerMove(float dx, float dy) override
+		{
+			if (window == nullptr) {
+				return;
+			}
+			SDL_Event e;
+			SDL_zero(e);
+			e.type = SDL_EVENT_MOUSE_MOTION;
+			e.motion.timestamp = SDL_GetTicksNS();
+			e.motion.windowID = SDL_GetWindowID(window);
+			e.motion.which = GX_HARDWARE_MOUSE_ID;
+			e.motion.xrel = dx;
+			e.motion.yrel = dy;
+			handleHardwareMouseEvent(window, e);
+		}
+	};
+
+	MouseTouchSink s_mouseTouchSink;
+	GXMouseTouch::Classifier<SDL_Event> s_mouseTouch(s_mouseTouchSink);
+}
+
+static void classifyMouseTouch(SDL3GameEngine *engine, SDL_Window *window, const SDL_Event &event)
+{
+	s_mouseTouchSink.engine = engine;
+	s_mouseTouchSink.window = window;
+	int winW = 0, winH = 0;
+	SDL_GetWindowSize(window, &winW, &winH);
+	const GXMouseTouch::Phase phase =
+		event.type == SDL_EVENT_FINGER_DOWN ? GXMouseTouch::DOWN
+		: event.type == SDL_EVENT_FINGER_MOTION ? GXMouseTouch::MOVE
+		: event.type == SDL_EVENT_FINGER_UP ? GXMouseTouch::UP : GXMouseTouch::CANCEL;
+	const uint64_t key = (uint64_t)event.tfinger.fingerID * 31u + (uint64_t)event.tfinger.touchID;
+	const bool secondary = event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID &&
+		(event.tfinger.fingerID & GX_PAD_SECONDARY_BUTTON) != 0;
+	// On the phone's own screen the AssistiveTouch pointer, which the player aims with, is where the
+	// touch is: the game's pointer goes there, so the press acts where the player sees it.
+	if (phase == GXMouseTouch::DOWN && event.tfinger.touchID != GX_EXTERNAL_PAD_TOUCH_ID &&
+	    !GXPictureOnExternalDisplay() && GXHardwareMousePointer()) {
+		padMoveTo(window, event.tfinger.x * (float)winW, event.tfinger.y * (float)winH);
+	}
+	s_mouseTouch.touch(SDL_GetTicks(), key, phase, event.tfinger.x * (float)winW, event.tfinger.y * (float)winH,
+	                   secondary, event);
 }
 #endif
 
@@ -2984,6 +3070,8 @@ static void syncHardwarePointer(SDL_Window *window)
 			SDL_HideCursor();
 		} else {
 			SDL_ShowCursor();
+			s_mouseTouchSink.window = window;
+			s_mouseTouch.reset();
 			GXHardwareMousePointer() = false;
 		}
 		fprintf(stderr, "INFO: hardware mouse %s\n", connected ? "connected: the game draws the pointer" : "gone");
@@ -3307,7 +3395,17 @@ void SDL3GameEngine::pollSDL3Events(void)
 				// over the game's view, where iOS shows a pointer) would fight its raw motion: dropped.
 				if (event.motion.which == GX_HARDWARE_MOUSE_ID) {
 					if (m_SDLWindow) {
-						handleHardwareMouseEvent(m_SDLWindow, event);
+						s_mouseTouchSink.engine = this;
+						s_mouseTouchSink.window = m_SDLWindow;
+						if (event.type == SDL_EVENT_MOUSE_MOTION) {
+							s_mouseTouch.mouseMoved(SDL_GetTicks());
+							handleHardwareMouseEvent(m_SDLWindow, event);
+						} else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+							// Merged with the touches AssistiveTouch presses for the same button.
+							s_mouseTouch.gameControllerButton(SDL_GetTicks(), event.button.button, event.button.down);
+						} else {
+							handleHardwareMouseEvent(m_SDLWindow, event);
+						}
 					}
 					break;
 				}
@@ -3336,92 +3434,15 @@ void SDL3GameEngine::pollSDL3Events(void)
 			case SDL_EVENT_FINGER_MOTION:
 			case SDL_EVENT_FINGER_UP:
 			case SDL_EVENT_FINGER_CANCELED:
-				// GeneralsX @bugfix Android port 11/07/2026 - A fresh touch-down or a
-				// touch-up (the clean-tap case dispatches its synthetic click on UP, see
-				// handleTouchEvent()) is a candidate to (re)open the on-screen keyboard.
-				// Set on both since the eventual entry-field focus change is processed a
-				// few frames later by GameEngine::update(), not synchronously here -- see
-				// updateTextInputState() and m_PendingTextInputRearmFrames.
-				//
-				// GeneralsX @bugfix Android port 13/09/2026 ...but only when the
-				// finger actually landed on a text field. This used to rearm on
-				// every touch anywhere on screen, and in the lobby and chat rooms
-				// the chat box holds focus the whole time -- so tapping a player,
-				// a map, a dropdown or empty space all summoned the on-screen
-				// keyboard again, over and over, with no way to keep it down.
-				// Dismissing it and tapping anything brought it straight back.
-				// GeneralsX @feature Android port 05/10/2026 With a pointer chosen in the launcher a
-				// finger is a touchpad (handleTouchpadEvent), and the native touch layer stays out.
 #if GX_HAS_EXTERNAL_DISPLAY
-				// GeneralsX @feature iOS port 11/11/2026 With the picture on an external display the
-				// fingers are the phone's trackpad (its own touch device, GXExternalDisplay.h). A gesture
-				// on the game's own view when the picture left ends as a cancel; anything else from it, and
-				// the pad's events once the picture is back, mean nothing.
-				// GeneralsX @feature iOS port 11/11/2026 A finger on the game's own view hands the game back
-				// to the touch controls from a hardware mouse's pointer (GXHardwareMousePointer).
-				if (event.type == SDL_EVENT_FINGER_DOWN && event.tfinger.touchID != GX_EXTERNAL_PAD_TOUCH_ID &&
-				    !GXPictureOnExternalDisplay() && GXHardwareMousePointer()) {
-					GXHardwareMousePointer() = false;
-					fprintf(stderr, "INFO: hardware mouse: a finger on the screen, the touch controls again\n");
-				}
-				if (GXPictureOnExternalDisplay() || event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
-					if (event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
-						Int clickX = 0, clickY = 0;
-						if (GXPictureOnExternalDisplay() && m_SDLWindow) {
-							handleTouchpadEvent(m_SDLWindow, event, clickX, clickY, TRUE);
-						}
-					} else if (m_SDLWindow && (event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED)) {
-						SDL_Event cancel = event;
-						cancel.type = SDL_EVENT_FINGER_CANCELED;
-						if (GXMouseModeEnabled()) {
-							Int clickX = 0, clickY = 0;
-							handleTouchpadEvent(m_SDLWindow, cancel, clickX, clickY);
-						} else {
-							handleTouchEvent(m_SDLWindow, cancel);
-						}
-					}
+				// GeneralsX @feature iOS port 11/11/2026 While a mouse is connected a touch may be one of its
+				// buttons (AssistiveTouch, GXMouseTouch.h): it is classified first.
+				if (GXHardwareMouseConnected() && m_SDLWindow) {
+					classifyMouseTouch(this, m_SDLWindow, event);
 					break;
 				}
 #endif
-				if (GXMouseModeEnabled()) {
-					Int clickX = 0, clickY = 0;
-					if (m_SDLWindow && handleTouchpadEvent(m_SDLWindow, event, clickX, clickY)) {
-						GameWindow* clicked = TheWindowManager ? TheWindowManager->getWindowUnderCursor(clickX, clickY) : nullptr;
-						if (clicked != nullptr && BitIsSet(clicked->winGetStyle(), GWS_ENTRY_FIELD)) {
-							m_PendingTextInputRearmFrames = 20;
-						}
-					}
-					break;
-				}
-				if (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_FINGER_UP) {
-					int winW = 0;
-					int winH = 0;
-					if (m_SDLWindow) {
-						SDL_GetWindowSize(m_SDLWindow, &winW, &winH);
-					}
-					// GeneralsX @bugfix Android port 01/10/2026 Hit-tested in the game's resolution,
-					// which differs from the window's when rendering below it (see handleTouchEvent).
-					int pbX = 0, pbY = 0, pbW = 0, pbH = 0;
-					if (TheDisplay && TheDisplay->getWidth() > 0 && TheDisplay->getHeight() > 0 &&
-					    !DX8Wrapper::Pillarbox_Get_Rect(pbX, pbY, pbW, pbH)) {
-						winW = TheDisplay->getWidth();
-						winH = TheDisplay->getHeight();
-					}
-
-					GameWindow* touched = (TheWindowManager && winW > 0 && winH > 0)
-						? TheWindowManager->getWindowUnderCursor(
-							(Int)(event.tfinger.x * (float)winW),
-							(Int)(event.tfinger.y * (float)winH))
-						: nullptr;
-
-					if (touched != nullptr &&
-						BitIsSet(touched->winGetStyle(), GWS_ENTRY_FIELD)) {
-						m_PendingTextInputRearmFrames = 20;
-					}
-				}
-				if (m_SDLWindow) {
-					handleTouchEvent(m_SDLWindow, event);
-				}
+				processFingerEvent(event);
 				break;
 #endif
 
@@ -3442,6 +3463,13 @@ void SDL3GameEngine::pollSDL3Events(void)
 	AndroidTextEditor::pump();
 #endif
 
+#if GX_HAS_EXTERNAL_DISPLAY
+	if (GXHardwareMouseConnected() && m_SDLWindow) {
+		s_mouseTouchSink.engine = this;
+		s_mouseTouchSink.window = m_SDLWindow;
+		s_mouseTouch.tick(SDL_GetTicks());
+	}
+#endif
 #if defined(SAGE_MOBILE_PLATFORM)
 	// Once per frame, after every queued SDL touch event for this frame has
 	// been drained -- see applyPendingCameraMotion()'s comment for why this
@@ -3449,6 +3477,100 @@ void SDL3GameEngine::pollSDL3Events(void)
 	applyPendingCameraMotion();
 #endif
 }
+
+#if defined(SAGE_MOBILE_PLATFORM)
+// One finger event, as the touch controls or the touchpad read it (pollSDL3Events; replayed by the
+// mouse-touch classifier when a touch turns out to be a finger, GXMouseTouch.h).
+void SDL3GameEngine::processFingerEvent(const SDL_Event &event)
+{
+	// GeneralsX @bugfix Android port 11/07/2026 - A fresh touch-down or a
+	// touch-up (the clean-tap case dispatches its synthetic click on UP, see
+	// handleTouchEvent()) is a candidate to (re)open the on-screen keyboard.
+	// Set on both since the eventual entry-field focus change is processed a
+	// few frames later by GameEngine::update(), not synchronously here -- see
+	// updateTextInputState() and m_PendingTextInputRearmFrames.
+	//
+	// GeneralsX @bugfix Android port 13/09/2026 ...but only when the
+	// finger actually landed on a text field. This used to rearm on
+	// every touch anywhere on screen, and in the lobby and chat rooms
+	// the chat box holds focus the whole time -- so tapping a player,
+	// a map, a dropdown or empty space all summoned the on-screen
+	// keyboard again, over and over, with no way to keep it down.
+	// Dismissing it and tapping anything brought it straight back.
+	// GeneralsX @feature Android port 05/10/2026 With a pointer chosen in the launcher a
+	// finger is a touchpad (handleTouchpadEvent), and the native touch layer stays out.
+#if GX_HAS_EXTERNAL_DISPLAY
+	// GeneralsX @feature iOS port 11/11/2026 With the picture on an external display the
+	// fingers are the phone's trackpad (its own touch device, GXExternalDisplay.h). A gesture
+	// on the game's own view when the picture left ends as a cancel; anything else from it, and
+	// the pad's events once the picture is back, mean nothing.
+	// GeneralsX @feature iOS port 11/11/2026 A finger on the game's own view hands the game back
+	// to the touch controls from a hardware mouse's pointer (GXHardwareMousePointer).
+	if (event.type == SDL_EVENT_FINGER_DOWN && event.tfinger.touchID != GX_EXTERNAL_PAD_TOUCH_ID &&
+	    !GXPictureOnExternalDisplay() && GXHardwareMousePointer()) {
+		GXHardwareMousePointer() = false;
+		fprintf(stderr, "INFO: hardware mouse: a finger on the screen, the touch controls again\n");
+	}
+	if (GXPictureOnExternalDisplay() || event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
+		if (event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
+			Int clickX = 0, clickY = 0;
+			if (GXPictureOnExternalDisplay() && m_SDLWindow) {
+				handleTouchpadEvent(m_SDLWindow, event, clickX, clickY, TRUE);
+			}
+		} else if (m_SDLWindow && (event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED)) {
+			SDL_Event cancel = event;
+			cancel.type = SDL_EVENT_FINGER_CANCELED;
+			if (GXMouseModeEnabled()) {
+				Int clickX = 0, clickY = 0;
+				handleTouchpadEvent(m_SDLWindow, cancel, clickX, clickY);
+			} else {
+				handleTouchEvent(m_SDLWindow, cancel);
+			}
+		}
+		return;
+	}
+#endif
+	if (GXMouseModeEnabled()) {
+		Int clickX = 0, clickY = 0;
+		if (m_SDLWindow && handleTouchpadEvent(m_SDLWindow, event, clickX, clickY)) {
+			GameWindow* clicked = TheWindowManager ? TheWindowManager->getWindowUnderCursor(clickX, clickY) : nullptr;
+			if (clicked != nullptr && BitIsSet(clicked->winGetStyle(), GWS_ENTRY_FIELD)) {
+				m_PendingTextInputRearmFrames = 20;
+			}
+		}
+		return;
+	}
+	if (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_FINGER_UP) {
+		int winW = 0;
+		int winH = 0;
+		if (m_SDLWindow) {
+			SDL_GetWindowSize(m_SDLWindow, &winW, &winH);
+		}
+		// GeneralsX @bugfix Android port 01/10/2026 Hit-tested in the game's resolution,
+		// which differs from the window's when rendering below it (see handleTouchEvent).
+		int pbX = 0, pbY = 0, pbW = 0, pbH = 0;
+		if (TheDisplay && TheDisplay->getWidth() > 0 && TheDisplay->getHeight() > 0 &&
+		    !DX8Wrapper::Pillarbox_Get_Rect(pbX, pbY, pbW, pbH)) {
+			winW = TheDisplay->getWidth();
+			winH = TheDisplay->getHeight();
+		}
+
+		GameWindow* touched = (TheWindowManager && winW > 0 && winH > 0)
+			? TheWindowManager->getWindowUnderCursor(
+				(Int)(event.tfinger.x * (float)winW),
+				(Int)(event.tfinger.y * (float)winH))
+			: nullptr;
+
+		if (touched != nullptr &&
+			BitIsSet(touched->winGetStyle(), GWS_ENTRY_FIELD)) {
+			m_PendingTextInputRearmFrames = 20;
+		}
+	}
+	if (m_SDLWindow) {
+		handleTouchEvent(m_SDLWindow, event);
+	}
+}
+#endif
 
 // GeneralsX @bugfix felipebraz 01/04/2026 Enable SDL text input only while an entry gadget owns focus.
 void SDL3GameEngine::updateTextInputState(void)

@@ -72,6 +72,8 @@ final class ExternalDisplayPadView: UIView, UIPointerInteractionDelegate {
     private var nextId: UInt64 = 1
     private var pointerButtons: [ObjectIdentifier: UInt64] = [:]
     private var loggedTouches = 0
+    /// gx_external_display.h, GX_PAD_SECONDARY_BUTTON.
+    private static let secondaryBit: UInt64 = 1 << 62
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -145,14 +147,20 @@ final class ExternalDisplayPadView: UIView, UIPointerInteractionDelegate {
                 pointerPressed(touch, event: event)
                 continue
             }
-            let finger = Finger(touch: touch, id: nextId)
+            // GeneralsX @feature iOS port 11/11/2026 An AssistiveTouch mouse presses its buttons as
+            // direct touches; its right button may show in the event's button mask. The engine decides
+            // which touches are the mouse's (GXMouseTouch.h); the mask goes with the finger's id.
+            let secondary = event?.buttonMask.contains(.secondary) ?? false
+            let finger = Finger(touch: touch, id: nextId | (secondary ? Self.secondaryBit : 0))
             nextId += 1
             fingers.append(finger)
             let (x, y) = gameFraction(touch)
             send(.fingerDown, finger.id, x, y)
-            if loggedTouches < 6 {
+            if loggedTouches < 12 {
                 loggedTouches += 1
-                LauncherRunner.log("external display: pad finger \(finger.id) down")
+                LauncherRunner.log("external display: pad finger \(finger.id & ~Self.secondaryBit) down, type \(touch.type.rawValue) "
+                                   + "(0 direct, 1 indirect, 2 pencil, 3 pointer), button mask \(event?.buttonMask.rawValue ?? 0), "
+                                   + "radius \(String(format: "%.1f", touch.majorRadius))")
             }
         }
     }

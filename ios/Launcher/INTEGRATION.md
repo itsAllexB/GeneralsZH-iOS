@@ -365,6 +365,16 @@ side in `SDL3GameEngine.cpp` / `SDL3Main.cpp` / `SDL3Mouse.cpp` behind `Common/G
   requested (SDL's relative mode on the phone, the pad's `prefersPointerLocked` with the picture
   away); `hardware input: pointer lock granted / not granted` in the log says what iOS did.
 
+- **AssistiveTouch (iPhone).** An iPhone gives apps a mouse only through AssistiveTouch. GameController
+  still reports its motion, but its buttons arrive as direct touches where the AssistiveTouch pointer
+  is (seen on the iPhone Duo: `pad finger N down` for each click). `GXMouseTouch.h` decides, while a
+  mouse is connected, which touches are the mouse's buttons (they move with GameController motion, or
+  are held still, or are quick clicks) and which are fingers (they move on their own), and merges
+  touch-made presses with GameController's own button reports so one press counts once. Unit tests:
+  `ios/tests/hardware-input/run.sh`. Log lines: `hardware mouse: button N down, from a touch
+  (AssistiveTouch) / GameController`, `GameController button N down`, and for the pad's first touches
+  their type and button mask.
+
 ## 6. Behaviour decisions where Android was ambiguous
 
 * **Base-game check:** Android's comment says "flag only when ALL base asset archives are absent",

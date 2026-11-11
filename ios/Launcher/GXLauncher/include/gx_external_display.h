@@ -50,6 +50,10 @@ enum GXPadEventKind
 	GX_PAD_BUTTON_UP = 6,
 };
 
+// A finger's id carries this bit when the touch's button mask held the secondary button: an
+// AssistiveTouch mouse's right button pressed as a touch (Core/.../GXMouseTouch.h).
+#define GX_PAD_SECONDARY_BUTTON (1ull << 62)
+
 typedef void (*GXPadCallback)(int32_t kind, uint64_t id, float x, float y);
 
 // The game's window exists: uiwindow is SDL's UIWindow (SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER). If a

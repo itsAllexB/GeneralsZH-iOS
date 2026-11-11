@@ -176,12 +176,16 @@ once, connected and disconnected at any time.
   pointer at a screen edge scrolls the map. A finger on the screen gives the touch controls back; the
   mouse takes over again when it moves. With the picture on a display the phone's trackpad and the
   mouse move the same pointer.
-- **What iOS limits on an iPhone:** the game reads the mouse through the GameController framework.
-  An iPhone does not lock the system pointer to an app (an iPad in full screen does); the game hides
-  the system pointer over its picture and moves its own from the mouse's motion, so this only shows
-  if iOS draws a pointer elsewhere (the home screen, a system alert). If your iPhone only takes a
-  mouse through **AssistiveTouch** (Settings › Accessibility › Touch › AssistiveTouch › Devices),
-  the mouse acts as a finger instead: the touch controls, not the pointer.
+- **On an iPhone the mouse needs AssistiveTouch** (Settings › Accessibility › Touch ›
+  AssistiveTouch): iOS gives apps a mouse only through it, and nothing an app can do changes that.
+  With it on, the game reads the mouse's motion through the GameController framework and its buttons
+  either from there or from the touches AssistiveTouch makes for them: a press that moves with the
+  mouse is a held button (selection box, right-drag to scroll the map), a quick one a click. A
+  finger on the screen within two seconds of moving the mouse may be taken for the mouse's button.
+- **What iOS does not let an iPhone app change:** the AssistiveTouch pointer stays on the phone's
+  screen and moves with the mouse (iOS does not lock it to an app, and the game cannot hide it). The
+  game asks iOS to ignore the first swipe from a screen edge, so the pointer reaching an edge does
+  not open Notification Center or Control Center at once, but a second one does.
 
 ## Launcher
 
