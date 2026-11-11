@@ -85,9 +85,9 @@ inline bool GXMouseModeEnabled()
 }
 
 // GeneralsX @feature iOS port 11/11/2026 Whether the game has a pointer: the player chose one in the
-// launcher, or the picture is on an external display and the phone is its trackpad
-// (GXExternalDisplay.h). Every reader that asks "is there a pointer" asks this.
+// launcher, the picture is on an external display and the phone is its trackpad, or a hardware mouse
+// is in use (GXExternalDisplay.h). Every reader that asks "is there a pointer" asks this.
 inline bool GXPointerMode()
 {
-	return GXMouseModeEnabled() || GXPictureOnExternalDisplay();
+	return GXMouseModeEnabled() || GXPictureOnExternalDisplay() || GXHardwareMousePointer();
 }

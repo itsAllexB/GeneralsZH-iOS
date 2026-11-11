@@ -144,6 +144,7 @@ static inline bool mobileShouldPauseRendering()
 
 #if GX_HAS_EXTERNAL_DISPLAY
 static void applyExternalDisplayResolution();
+static void syncHardwarePointer(SDL_Window *window);
 #endif
 
 // GeneralsX @build Android port ANGLE experiment - diagnostic logging for the
@@ -1189,6 +1190,76 @@ static Bool handleExternalMouseEvent(SDL_Window *window, const SDL_Event &event)
 		}
 		padSendButton(window, event.button.button, event.button.down, event.button.clicks > 0 ? event.button.clicks : 1);
 		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+
+// GeneralsX @feature iOS port 11/11/2026 A hardware mouse read through GameController
+// (HardwareInput.swift, GX_HARDWARE_MOUSE_ID): the game's pointer, on the phone and on an external
+// display, moved by the mouse's own motion -- the touchpad's pointer, so the phone's trackpad and the
+// mouse move the same one. Its use makes the game a pointer game (GXPointerMode) until a finger
+// touches the game's own view.
+static Bool handleHardwareMouseEvent(SDL_Window *window, const SDL_Event &event)
+{
+	int winW = 0, winH = 0;
+	SDL_GetWindowSize(window, &winW, &winH);
+	if (winW <= 0 || winH <= 0) {
+		return FALSE;
+	}
+	if (!GXHardwareMousePointer()) {
+		GXHardwareMousePointer() = true;
+		fprintf(stderr, "INFO: hardware mouse: it drives the game's pointer\n");
+	}
+	if (!s_pad.havePointer) {
+		s_pad.pointerX = winW * 0.5f;
+		s_pad.pointerY = winH * 0.5f;
+		s_pad.havePointer = TRUE;
+	}
+	switch (event.type) {
+	case SDL_EVENT_MOUSE_MOTION:
+		padSendMotion(window, event.motion.xrel, event.motion.yrel);
+		return TRUE;
+	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+	case SDL_EVENT_MOUSE_BUTTON_UP:
+	{
+		// SDL counts double clicks for its own mice; these need the same, as the game reads them
+		// (a double click selects every unit of a type).
+		static Uint64 s_lastDownMs[8] = {};
+		static float s_lastDownX[8] = {}, s_lastDownY[8] = {};
+		const Uint8 button = event.button.button;
+		Uint8 clicks = 1;
+		if (button < 8 && event.button.down) {
+			const Uint64 now = SDL_GetTicks();
+			if (s_lastDownMs[button] != 0 && now - s_lastDownMs[button] < 400 &&
+			    fabsf(s_pad.pointerX - s_lastDownX[button]) < 8.0f && fabsf(s_pad.pointerY - s_lastDownY[button]) < 8.0f) {
+				clicks = 2;
+				s_lastDownMs[button] = 0;
+			} else {
+				s_lastDownMs[button] = now;
+			}
+			s_lastDownX[button] = s_pad.pointerX;
+			s_lastDownY[button] = s_pad.pointerY;
+		}
+		if (button == SDL_BUTTON_LEFT) {
+			s_pad.leftHeld = event.button.down;
+		}
+		padSendButton(window, button, event.button.down, clicks);
+		return TRUE;
+	}
+	case SDL_EVENT_MOUSE_WHEEL:
+	{
+		SDL3Mouse *mouse = padMouse();
+		if (mouse == nullptr) {
+			return TRUE;
+		}
+		SDL_Event wheel = event;
+		wheel.wheel.which = SDL3Mouse::TOUCHPAD_MOUSE_ID;
+		wheel.wheel.mouse_x = s_pad.pointerX;
+		wheel.wheel.mouse_y = s_pad.pointerY;
+		mouse->addSDLEvent(&wheel);
+		return TRUE;
+	}
 	default:
 		return FALSE;
 	}
@@ -2843,6 +2914,9 @@ void SDL3GameEngine::update(void)
 	if (!pausedNow) {
 		applyExternalDisplayResolution();
 	}
+	// GeneralsX @feature iOS port 11/11/2026 Hardware mouse and keyboard (GXExternalDisplay.h).
+	gx_hardware_input_update();
+	syncHardwarePointer(m_SDLWindow);
 #endif
 #if defined(__ANDROID__)
 	// GeneralsX @bugfix Android port 28/09/2026 Game speed above the screen's refresh rate. The
@@ -2890,6 +2964,36 @@ void SDL3GameEngine::update(void)
 }
 
 #if GX_HAS_EXTERNAL_DISPLAY
+// GeneralsX @feature iOS port 11/11/2026 With a mouse connected the game draws its own pointer, so the
+// system's is hidden over the game's view (SDL_uikitview.m hides it while SDL's cursor is hidden), and
+// the pointer lock is asked for through SDL's relative mode (its view controller's prefersPointerLocked).
+// iPadOS grants the lock to a full-screen app; an iPhone does not, and the hidden system pointer then
+// still exists, unseen: the game's pointer follows the mouse's raw motion either way. Relative mode is
+// only asked for while the window is on the phone: on a display it cannot have focus (the pad's
+// controller asks for the lock there, ExternalDisplayPad.swift).
+static void syncHardwarePointer(SDL_Window *window)
+{
+	if (window == nullptr) {
+		return;
+	}
+	const bool connected = GXHardwareMouseConnected();
+	static bool s_connected = false;
+	if (connected != s_connected) {
+		s_connected = connected;
+		if (connected) {
+			SDL_HideCursor();
+		} else {
+			SDL_ShowCursor();
+			GXHardwareMousePointer() = false;
+		}
+		fprintf(stderr, "INFO: hardware mouse %s\n", connected ? "connected: the game draws the pointer" : "gone");
+	}
+	const bool wantRelative = connected && !GXPictureOnExternalDisplay();
+	if (SDL_GetWindowRelativeMouseMode(window) != wantRelative) {
+		SDL_SetWindowRelativeMouseMode(window, wantRelative);
+	}
+}
+
 // GeneralsX @feature iOS port 11/11/2026 The game's resolution follows the external display the
 // picture is on, and goes back to the phone's once the display has stayed away (ExternalDisplay.swift
 // decides which, ResolutionPlan). It changes the way the Options menu changes it
@@ -3198,6 +3302,18 @@ void SDL3GameEngine::pollSDL3Events(void)
 				}
 #endif
 #if GX_HAS_EXTERNAL_DISPLAY
+				// GeneralsX @feature iOS port 11/11/2026 A hardware mouse through GameController
+				// (HardwareInput.swift). While one is connected SDL's own pointer events (UIKit's hover
+				// over the game's view, where iOS shows a pointer) would fight its raw motion: dropped.
+				if (event.motion.which == GX_HARDWARE_MOUSE_ID) {
+					if (m_SDLWindow) {
+						handleHardwareMouseEvent(m_SDLWindow, event);
+					}
+					break;
+				}
+				if (GXHardwareMouseConnected() && event.motion.which != GX_EXTERNAL_PAD_MOUSE_ID) {
+					break;
+				}
 				if (event.motion.which == GX_EXTERNAL_PAD_MOUSE_ID && !GXPictureOnExternalDisplay()) {
 					break;	// left over from the pad after the picture came back
 				}
@@ -3241,6 +3357,13 @@ void SDL3GameEngine::pollSDL3Events(void)
 				// fingers are the phone's trackpad (its own touch device, GXExternalDisplay.h). A gesture
 				// on the game's own view when the picture left ends as a cancel; anything else from it, and
 				// the pad's events once the picture is back, mean nothing.
+				// GeneralsX @feature iOS port 11/11/2026 A finger on the game's own view hands the game back
+				// to the touch controls from a hardware mouse's pointer (GXHardwareMousePointer).
+				if (event.type == SDL_EVENT_FINGER_DOWN && event.tfinger.touchID != GX_EXTERNAL_PAD_TOUCH_ID &&
+				    !GXPictureOnExternalDisplay() && GXHardwareMousePointer()) {
+					GXHardwareMousePointer() = false;
+					fprintf(stderr, "INFO: hardware mouse: a finger on the screen, the touch controls again\n");
+				}
 				if (GXPictureOnExternalDisplay() || event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
 					if (event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
 						Int clickX = 0, clickY = 0;
@@ -3339,6 +3462,9 @@ void SDL3GameEngine::updateTextInputState(void)
 		focusedWindow != nullptr && BitIsSet(focusedWindow->winGetStyle(), GWS_ENTRY_FIELD);
 
 	if (!wantsTextInput) {
+#if GX_HAS_EXTERNAL_DISPLAY
+		gx_hardware_text_input(false);
+#endif
 		if (m_IsTextInputActive) {
 			SDL_StopTextInput(m_SDLWindow);
 			m_IsTextInputActive = false;
@@ -3351,6 +3477,23 @@ void SDL3GameEngine::updateTextInputState(void)
 	}
 
 	m_TextInputFocusWindow = focusedWindow;
+
+#if GX_HAS_EXTERNAL_DISPLAY
+	// GeneralsX @feature iOS port 11/11/2026 With a hardware keyboard a focused text field takes its
+	// typing at once, without a tap and without SDL's hidden text field and the on-screen keyboard --
+	// which cannot take input at all while the picture is on an external display (HardwareInput.swift
+	// hands the typed characters over as SDL text input events).
+	if (gx_hardware_keyboard_connected()) {
+		if (m_IsTextInputActive) {
+			SDL_StopTextInput(m_SDLWindow);
+			m_IsTextInputActive = false;
+		}
+		gx_hardware_text_input(true);
+		m_PendingTextInputRearmFrames = 0;
+		return;
+	}
+	gx_hardware_text_input(false);
+#endif
 
 #if defined(__ANDROID__)
 	// GeneralsX @feature Android port 02/10/2026 Text is edited in an Android EditText bar

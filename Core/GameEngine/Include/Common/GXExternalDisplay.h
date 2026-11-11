@@ -39,6 +39,7 @@
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #define GX_HAS_EXTERNAL_DISPLAY 1
 #include "gx_external_display.h"
+#include "gx_hardware_input.h"
 #else
 #define GX_HAS_EXTERNAL_DISPLAY 0
 #endif
@@ -47,6 +48,9 @@
 // (SDL3Main.cpp pushes their events; SDL3GameEngine.cpp reads them).
 #define GX_EXTERNAL_PAD_TOUCH_ID 0x4758504144ull
 #define GX_EXTERNAL_PAD_MOUSE_ID 0xFFFFFFFCu
+// GeneralsX @feature iOS port 11/11/2026 The SDL mouse id of a hardware mouse read through
+// GameController (HardwareInput.swift, gx_hardware_input.h): SDL3Main.cpp pushes its events.
+#define GX_HARDWARE_MOUSE_ID 0xFFFFFFFBu
 
 // Whether the game's picture is on an external display now.
 inline bool GXPictureOnExternalDisplay()
@@ -57,3 +61,23 @@ inline bool GXPictureOnExternalDisplay()
 	return false;
 #endif
 }
+
+// GeneralsX @feature iOS port 11/11/2026 Whether a mouse is connected (GameController knows one), on
+// the phone or with the picture on a display.
+inline bool GXHardwareMouseConnected()
+{
+#if GX_HAS_EXTERNAL_DISPLAY
+	return gx_hardware_mouse_connected();
+#else
+	return false;
+#endif
+}
+
+// Whether the hardware mouse drives the game's pointer now: set by its motion and buttons, cleared by
+// a finger on the game's own view, so a player can go from the mouse to the touch controls and back.
+inline bool &GXHardwareMousePointer()
+{
+	static bool active = false;
+	return active;
+}
+

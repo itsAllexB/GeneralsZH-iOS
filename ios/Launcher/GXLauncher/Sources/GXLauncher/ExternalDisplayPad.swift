@@ -26,9 +26,9 @@
 //                     (PointerMapping): move one to move the pointer, tap to click, two-finger tap
 //                     to right-click, tap then touch again and drag for a selection box, two
 //                     fingers to scroll the map and pinch to zoom
-//   a mouse        -> where it hovers over the pad is where the pointer is on the picture, and its
-//                     buttons click (only where iOS gives the app a pointer: iPad-style pointer
-//                     support; elsewhere a mouse reaches the pad as touches)
+//   a mouse        -> GameController's raw motion and buttons (HardwareInput.swift); only a pointer
+//                     GameController does not know (a pointer device without a GCMouse) is followed
+//                     here, by where it hovers over the pad
 //
 // The phone's own pointer is hidden over the pad: the one that counts is on the display.
 
@@ -49,6 +49,11 @@ final class ExternalDisplayPadController: UIViewController {
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         gameController?.supportedInterfaceOrientations ?? .all
     }
+
+    // GeneralsX @feature iOS port 11/11/2026 With a mouse connected (HardwareInput.swift) its raw motion
+    // drives the game's pointer; locking the system pointer keeps it from wandering over the pad. iPadOS
+    // may grant it, an iPhone does not (the pointer is then hidden over the pad instead).
+    override var prefersPointerLocked: Bool { HardwareInput.mouseConnected }
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -185,6 +190,9 @@ final class ExternalDisplayPadView: UIView, UIPointerInteractionDelegate {
 
     @objc private func hovered(_ recognizer: UIHoverGestureRecognizer) {
         guard recognizer.state == .began || recognizer.state == .changed else { return }
+        // A mouse GameController knows moves the pointer by its raw motion (HardwareInput.swift); the
+        // system pointer's position over the pad would fight it.
+        if !GCMouse.mice().isEmpty { return }
         hover(at: recognizer.location(in: self))
     }
 
@@ -197,10 +205,11 @@ final class ExternalDisplayPadView: UIView, UIPointerInteractionDelegate {
     }
 
     private func pointerPressed(_ touch: UITouch, event: UIEvent?) {
-        hover(at: touch.location(in: self))
-        // With the mouse known to the GameController framework SDL reports its buttons itself (and
-        // ignores these touches, SDL_uikitview.m); sending them here too would click twice.
+        // With the mouse known to the GameController framework its buttons come from there
+        // (HardwareInput.swift; SDL_uikitview.m ignores these touches then too); sending them here as
+        // well would click twice.
         if !GCMouse.mice().isEmpty { return }
+        hover(at: touch.location(in: self))
         // SDL's button numbers: 1 left, 3 right.
         let button: UInt64 = (event?.buttonMask.contains(.secondary) ?? false) ? 3 : 1
         pointerButtons[ObjectIdentifier(touch)] = button

@@ -37,6 +37,8 @@ choose it in the launcher.
   swipe, so a palm on the edge doesn't interrupt a match.
 - **Landscape** on iPhones and iPads (both directions); the iPhone Duo's inner display, which
   ignores orientation locks, keeps every orientation.
+- **Keyboard and mouse** — a Bluetooth or USB keyboard and mouse work as on a PC, on the phone and
+  on an external display (see [Keyboard and mouse](#keyboard-and-mouse)).
 - **External display** — plug in a monitor or TV (USB-C, or AirPlay) at any time and the game
   moves there in the display's own shape, while the phone becomes a trackpad (see
   [External display](#external-display)).
@@ -152,11 +154,34 @@ on the phone with its touch controls. Nothing changes when no display is connect
   | Two fingers | Drag to scroll the map, pinch to zoom |
   | Pointer at a screen edge | Scroll the map, as on a PC |
 
-  A connected keyboard keeps working; a mouse moves the pointer over the phone and clicks where
-  iOS gives apps a pointer. Sound stays where iOS routes it. Typing into the game's text fields with
-  the on-screen keyboard needs the picture on the phone.
+  A keyboard and mouse work there too (see below). Sound stays where iOS routes it. Without a
+  hardware keyboard, typing into the game's text fields needs the picture on the phone (the
+  on-screen keyboard cannot show on the display).
 - **App switches** take the picture back to the phone for a moment (iOS does that); the
   resolution changes only when the display has really gone.
+
+## Keyboard and mouse
+
+Bluetooth, or plugged into a USB-C hub (with or without a display on the same hub); several at
+once, connected and disconnected at any time.
+
+- **Keyboard:** every key and hotkey the game has, with Ctrl, Shift and Alt (control groups, queued
+  orders, waypoints), the function keys, the arrows to scroll the map, Escape, Tab, Space, Enter;
+  held keys repeat as the game repeats them. Typing goes into the game's text fields (player name,
+  chat, save names) as soon as one has focus, without the on-screen keyboard — also with the picture
+  on an external display. Keys iOS keeps for itself (the Globe key, Command-Tab, Command-H, …)
+  never reach the game.
+- **Mouse:** moving it shows the game's own pointer, which it drives directly: left and right
+  click, double click, the middle button, drag for a selection box, the wheel to zoom, and the
+  pointer at a screen edge scrolls the map. A finger on the screen gives the touch controls back; the
+  mouse takes over again when it moves. With the picture on a display the phone's trackpad and the
+  mouse move the same pointer.
+- **What iOS limits on an iPhone:** the game reads the mouse through the GameController framework.
+  An iPhone does not lock the system pointer to an app (an iPad in full screen does); the game hides
+  the system pointer over its picture and moves its own from the mouse's motion, so this only shows
+  if iOS draws a pointer elsewhere (the home screen, a system alert). If your iPhone only takes a
+  mouse through **AssistiveTouch** (Settings › Accessibility › Touch › AssistiveTouch › Devices),
+  the mouse acts as a finger instead: the touch controls, not the pointer.
 
 ## Launcher
 

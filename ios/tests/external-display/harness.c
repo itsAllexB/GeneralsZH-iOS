@@ -39,6 +39,7 @@
 #include <string.h>
 
 #include "gx_external_display.h"
+#include "gx_hardware_input.h"
 #include "gx_launcher.h"
 
 #define PAD_TOUCH_ID 0x4758504144ull
@@ -84,6 +85,18 @@ static void padInput(int32_t kind, uint64_t id, float x, float y)
 	SDL_PushEvent(&e);
 }
 
+// The hardware mouse and keyboard callbacks (HardwareInput.swift): logged, and the mouse moves the cross.
+static float s_hwDx, s_hwDy;
+static void hardwareMouse(int32_t kind, uint64_t id, float x, float y)
+{
+	if (kind == GX_HARDWARE_MOUSE_MOVE) { s_hwDx += x; s_hwDy += y; return; }
+	fprintf(stderr, "HARNESS hardware mouse kind %d id %llu %.2f,%.2f\n", kind, (unsigned long long)id, x, y);
+}
+static void hardwareText(const char *utf8)
+{
+	fprintf(stderr, "HARNESS hardware text \"%s\"\n", utf8 ? utf8 : "");
+}
+
 static void drawCircle(SDL_Renderer *r, float cx, float cy, float radius)
 {
 	SDL_FPoint pts[361];
@@ -122,6 +135,10 @@ int main(int argc, char *argv[])
 	gx_external_display_set_phone_resolution(pw & ~1, ph);
 	gx_external_display_start(SDL_GetPointerProperty(SDL_GetWindowProperties(s_window), SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, NULL), padInput);
 	gx_external_display_update();
+	gx_hardware_input_start(hardwareMouse, hardwareText);
+	fprintf(stderr, "HARNESS hardware: mouse %d keyboard %d\n", gx_hardware_mouse_connected(), gx_hardware_keyboard_connected());
+	// HARNESS_TEXT=1: as if a game text field had focus all along (SDL3GameEngine.cpp updateTextInputState).
+	const bool wantText = SDL_getenv("HARNESS_TEXT") != NULL;
 	int32_t sw = 0, sh = 0;
 	if (gx_external_display_start_resolution(&sw, &sh))
 		fprintf(stderr, "HARNESS start resolution %dx%d (display connected at start; phone %dx%d)\n", sw, sh, pw & ~1, ph);
@@ -147,6 +164,8 @@ int main(int argc, char *argv[])
 	bool running = true;
 	while (running) {
 		gx_external_display_update();
+		gx_hardware_text_input(wantText);
+		gx_hardware_input_update();
 		int ww = 0, wh = 0, pxw = 0, pxh = 0, ow = 0, oh = 0;
 		SDL_GetWindowSize(s_window, &ww, &wh);
 		SDL_GetWindowSizeInPixels(s_window, &pxw, &pxh);
@@ -166,9 +185,17 @@ int main(int argc, char *argv[])
 			if (script == 300) fprintf(stderr, "HARNESS script done: pointer %.0f,%.0f clicks %d right %d\n", px, py, clicks, rightClicks);
 		}
 
+		if (s_hwDx != 0 || s_hwDy != 0) {
+			px = SDL_clamp(px + s_hwDx, 0, ww - 1);
+			py = SDL_clamp(py + s_hwDy, 0, wh - 1);
+			s_hwDx = s_hwDy = 0;
+		}
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
 			switch (e.type) {
+			case SDL_EVENT_KEY_DOWN:
+				fprintf(stderr, "HARNESS key down %s mod 0x%x window %u\n", SDL_GetScancodeName(e.key.scancode), e.key.mod, e.key.windowID);
+				break;
 			case SDL_EVENT_QUIT: running = false; break;
 			case SDL_EVENT_WINDOW_FOCUS_LOST: fprintf(stderr, "HARNESS focus lost (away %d)\n", gx_external_display_picture_away()); break;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED: fprintf(stderr, "HARNESS focus gained (away %d)\n", gx_external_display_picture_away()); break;

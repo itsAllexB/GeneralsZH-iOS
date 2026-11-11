@@ -561,6 +561,72 @@ static void gxExternalPadInput(int32_t kind, uint64_t id, float x, float y)
 	SDL_PushEvent(&e);
 }
 
+// GeneralsX @feature iOS port 11/11/2026 A hardware mouse read through GameController
+// (HardwareInput.swift): its motion, buttons and wheel become SDL mouse events of their own id
+// (GX_HARDWARE_MOUSE_ID), which SDL3GameEngine.cpp turns into the game's pointer.
+static void gxHardwareMouseInput(int32_t kind, uint64_t id, float x, float y)
+{
+	if (TheSDL3Window == nullptr) {
+		return;
+	}
+	SDL_Event e;
+	SDL_zero(e);
+	const SDL_WindowID windowID = SDL_GetWindowID(TheSDL3Window);
+	switch (kind) {
+	case GX_HARDWARE_MOUSE_MOVE:
+		e.type = SDL_EVENT_MOUSE_MOTION;
+		e.motion.timestamp = SDL_GetTicksNS();
+		e.motion.windowID = windowID;
+		e.motion.which = GX_HARDWARE_MOUSE_ID;
+		e.motion.xrel = x;
+		e.motion.yrel = y;
+		break;
+	case GX_HARDWARE_MOUSE_BUTTON_DOWN:
+	case GX_HARDWARE_MOUSE_BUTTON_UP:
+		e.type = kind == GX_HARDWARE_MOUSE_BUTTON_DOWN ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+		e.button.timestamp = SDL_GetTicksNS();
+		e.button.windowID = windowID;
+		e.button.which = GX_HARDWARE_MOUSE_ID;
+		e.button.button = (Uint8)id;
+		e.button.down = kind == GX_HARDWARE_MOUSE_BUTTON_DOWN;
+		e.button.clicks = 1;
+		break;
+	case GX_HARDWARE_MOUSE_WHEEL:
+		e.type = SDL_EVENT_MOUSE_WHEEL;
+		e.wheel.timestamp = SDL_GetTicksNS();
+		e.wheel.windowID = windowID;
+		e.wheel.which = GX_HARDWARE_MOUSE_ID;
+		e.wheel.x = x;
+		e.wheel.y = y;
+		e.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
+		break;
+	default:
+		return;
+	}
+	SDL_PushEvent(&e);
+}
+
+// GeneralsX @feature iOS port 11/11/2026 Text typed on a hardware keyboard (HardwareInput.swift), as
+// SDL's own text input event. SDL_PushEvent copies the event, not the text it points to, so the text
+// lives in a ring of buffers that outlasts the frame or two before the engine reads it.
+static void gxHardwareText(const char *utf8)
+{
+	if (utf8 == nullptr || utf8[0] == '\0') {
+		return;
+	}
+	static char s_ring[32][64];
+	static unsigned s_next = 0;
+	char *slot = s_ring[s_next++ % 32];
+	snprintf(slot, sizeof(s_ring[0]), "%s", utf8);
+	SDL_Event e;
+	SDL_zero(e);
+	e.type = SDL_EVENT_TEXT_INPUT;
+	e.text.timestamp = SDL_GetTicksNS();
+	e.text.windowID = TheSDL3Window != nullptr ? SDL_GetWindowID(TheSDL3Window) : 0;
+	e.text.text = slot;
+	SDL_PushEvent(&e);
+}
+
 // GeneralsX @feature iOS port 11/11/2026 Hands the game's UIWindow to the external display support
 // once (ExternalDisplay.swift): with a display connected the window moves there now, before DXVK makes
 // its surface, so the swapchain is made for the display.
@@ -574,6 +640,7 @@ static void gxStartExternalDisplay()
 	void *uiwindow = SDL_GetPointerProperty(SDL_GetWindowProperties(TheSDL3Window), SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, nullptr);
 	gx_external_display_start(uiwindow, gxExternalPadInput);
 	gx_external_display_update();
+	gx_hardware_input_start(gxHardwareMouseInput, gxHardwareText);
 }
 #endif
 

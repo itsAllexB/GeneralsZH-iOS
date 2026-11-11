@@ -93,8 +93,8 @@ final class ExternalDisplay {
     private var phoneScene: UIWindowScene?
     private var display: UIWindowScene?
     private var cardWindow: UIWindow?
-    private var gameWindow: UIWindow?
-    private var padWindow: UIWindow?
+    private(set) var gameWindow: UIWindow?
+    private(set) var padWindow: UIWindow?
     private var pad: ExternalDisplayPadController?
     private var accessory: AnyObject?
     private var callback: PadCallback?
@@ -307,6 +307,11 @@ final class ExternalDisplay {
         if plan.tick(now: Self.now()) {
             Self.log("the display stayed away \(ResolutionPlan.graceSeconds) s with the app active: the phone's resolution \(plan.wanted?.description ?? "?") again")
         }
+    }
+
+    /// A mouse came or went (HardwareInput.swift): the pad asks for the pointer lock while one is connected.
+    func pointerLockPreferenceChanged() {
+        pad?.setNeedsUpdateOfPrefersPointerLocked()
     }
 
     func setPhoneResolution(_ size: PixelSize) {

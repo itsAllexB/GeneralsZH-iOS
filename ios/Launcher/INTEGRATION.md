@@ -340,6 +340,31 @@ tested), the engine side behind `Common/GXExternalDisplay.h`.
 
 Simulator harness: `ios/tests/external-display/README.md`.
 
+## 5b. Hardware keyboard and mouse (`include/gx_hardware_input.h`)
+
+`HardwareInput.swift`, decisions in `GXLauncherCore/HardwareInputPlan.swift` (unit tested), engine
+side in `SDL3GameEngine.cpp` / `SDL3Main.cpp` / `SDL3Mouse.cpp` behind `Common/GXExternalDisplay.h`.
+
+- **Keys** are SDL's own: its UIKit backend reads every connected keyboard through
+  `GCKeyboard.coalesced` and posts key events with or without window focus, so they reach the engine
+  on the phone and with the picture on a display. The engine repeats held keys itself.
+- **Text.** SDL types only through its hidden `UITextField`, opened by a tap, and that field cannot
+  take input on a display that takes none. With a hardware keyboard connected the engine calls
+  `gx_hardware_text_input(true)` while a text field has focus: a responder without `UIKeyInput` (no
+  on-screen keyboard) becomes first responder in the window that has the keyboard (the game's, or the
+  pad's while the picture is away) and passes each press's `UIKey.characters` to the engine as
+  `SDL_EVENT_TEXT_INPUT`. Shortcuts (Control, Command) and non-text keys are left to the key events.
+- **Mouse.** SDL moves its pointer only from UIKit's pointer events over its view and takes
+  GameController's raw motion only in relative mode, which needs keyboard focus. So every `GCMouse`
+  is driven from `HardwareInput.swift` (raw motion scaled to the game window, buttons merged across
+  mice, the wheel), replacing SDL's handlers (taken back each frame if SDL re-installs them on a
+  reconnect). Events arrive as SDL mouse events of id `GX_HARDWARE_MOUSE_ID` and move the touchpad's
+  pointer, which the game draws (`GXPointerMode()`, `GXHardwareMousePointer()`); a finger on the
+  game's own view gives the touch controls back. SDL's own pointer events are dropped while a mouse
+  is connected. The system pointer is hidden over the game's view (`SDL_HideCursor`) and the lock is
+  requested (SDL's relative mode on the phone, the pad's `prefersPointerLocked` with the picture
+  away); `hardware input: pointer lock granted / not granted` in the log says what iOS did.
+
 ## 6. Behaviour decisions where Android was ambiguous
 
 * **Base-game check:** Android's comment says "flag only when ALL base asset archives are absent",
