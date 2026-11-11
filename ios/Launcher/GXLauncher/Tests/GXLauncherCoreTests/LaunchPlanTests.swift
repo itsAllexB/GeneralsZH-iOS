@@ -109,6 +109,22 @@ final class LaunchPlanTests: XCTestCase {
         XCTAssertEqual(exported(), "200")
     }
 
+    // GeneralsX @feature iOS port 11/11/2026 The external display's cap (ExternalDisplayPlan.swift).
+    func testExternalDisplayMaxHeight() throws {
+        let home = try TempHome()
+        let store = OptionsIniStore(file: home.paths.optionsIni, defaults: nil)
+        func exported() -> String? {
+            LaunchPlanBuilder.plan(paths: home.paths, preferences: LauncherPreferences(), safeInsets: nil).value(of: "GX_EXTERNAL_MAX_HEIGHT")
+        }
+        XCTAssertNil(exported(), "no key: the 1080-line default")
+        try store.update { $0.set("GXExternalMaxHeight", "1440") }
+        XCTAssertEqual(exported(), "1440")
+        try store.update { $0.set("GXExternalMaxHeight", "100") }
+        XCTAssertNil(exported(), "out of range: the default")
+        try store.update { $0.set("GXExternalMaxHeight", "4k") }
+        XCTAssertNil(exported())
+    }
+
     func testDataSourcePriority() throws {
         let home = try TempHome()
         let paths = home.paths

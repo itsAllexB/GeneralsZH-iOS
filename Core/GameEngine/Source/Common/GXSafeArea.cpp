@@ -21,6 +21,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/GXSafeArea.h"
+#include "Common/GXExternalDisplay.h"
 #include "GameClient/Display.h"
 
 namespace
@@ -59,9 +60,13 @@ void setFractions( Real left, Real top, Real right, Real bottom )
 	fflush(stderr);
 }
 
-Int leftPx() { return TheDisplay ? toPixels(s_left, TheDisplay->getWidth()) : 0; }
-Int topPx() { return TheDisplay ? toPixels(s_top, TheDisplay->getHeight()) : 0; }
-Int rightPx() { return TheDisplay ? toPixels(s_right, TheDisplay->getWidth()) : 0; }
-Int bottomPx() { return TheDisplay ? toPixels(s_bottom, TheDisplay->getHeight()) : 0; }
+// GeneralsX @feature iOS port 11/11/2026 The insets are the phone's (its notch and corners); on an
+// external display (GXExternalDisplay.h) the whole picture is visible.
+static bool insetsApply() { return TheDisplay != nullptr && !GXPictureOnExternalDisplay(); }
+
+Int leftPx() { return insetsApply() ? toPixels(s_left, TheDisplay->getWidth()) : 0; }
+Int topPx() { return insetsApply() ? toPixels(s_top, TheDisplay->getHeight()) : 0; }
+Int rightPx() { return insetsApply() ? toPixels(s_right, TheDisplay->getWidth()) : 0; }
+Int bottomPx() { return insetsApply() ? toPixels(s_bottom, TheDisplay->getHeight()) : 0; }
 
 }

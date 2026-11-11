@@ -22,3 +22,13 @@ what every control bug here has turned out to be.
 
 For how this is built and how to add a gesture, see
 [`docs/WORKDIR/lessons/LESSON-touch-input-is-not-a-mouse.md`](../WORKDIR/lessons/LESSON-touch-input-is-not-a-mouse.md).
+
+## On an external display
+
+While the game's picture is on a monitor or TV (README, "External display"), the phone is a
+trackpad and the game has a pointer: the launcher's "Mouse and touchpad" touchpad
+(`handleTouchpadEvent`), fed by the phone's own pad (`ios/Launcher/GXLauncher`,
+`ExternalDisplayPad.swift`) with its touches scaled so that a swipe across 60 % of the phone crosses
+the picture. Menus and the group panel do not take the finger directly there, since the finger is
+not on the picture; everything is the touchpad. Unplugging returns the native touch controls.
+

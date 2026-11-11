@@ -804,6 +804,17 @@
         }
       }
     },
+    "Move a finger here to move the pointer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move a finger here to move the pointer"
+          }
+        }
+      }
+    },
     "Neither INIZH.big nor INI.big is in this folder: it is not a Zero Hour folder.": {
       "extractionState": "manual",
       "localizations": {
@@ -1156,6 +1167,28 @@
         }
       }
     },
+    "Tap to click · tap with two fingers to right-click": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to click · tap with two fingers to right-click"
+          }
+        }
+      }
+    },
+    "Tap, then touch again and drag for a selection box": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap, then touch again and drag for a selection box"
+          }
+        }
+      }
+    },
     "Tapping the minimap jumps the camera there even with units selected, and dragging on the minimap moves the camera with your finger. An armed ability or attack-move still targets through the minimap.": {
       "extractionState": "manual",
       "localizations": {
@@ -1233,6 +1266,17 @@
         }
       }
     },
+    "The game appears here once it starts. The phone is its trackpad.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game appears here once it starts. The phone is its trackpad."
+          }
+        }
+      }
+    },
     "The game can only start once every archive is on this iPhone. Keep the app open, or move the folder to On My iPhone.": {
       "extractionState": "manual",
       "localizations": {
@@ -1262,6 +1306,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The game data folder is missing."
+          }
+        }
+      }
+    },
+    "The game is on the external display": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The game is on the external display"
           }
         }
       }
@@ -1394,6 +1449,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Touchpad: move a finger to move the cursor. Tap = left click, two taps = double click, two-finger tap = right click, two fingers = scroll the map, pinch = zoom. Takes effect when you tap Play."
+          }
+        }
+      }
+    },
+    "Two fingers: drag to scroll the map, pinch to zoom": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two fingers: drag to scroll the map, pinch to zoom"
           }
         }
       }

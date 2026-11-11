@@ -34,6 +34,7 @@
 #include "Common/GXLogging.h"
 #if defined(GX_HAS_IOS_LAUNCHER)
 #include "gx_launcher.h"
+#include "Common/GXExternalDisplay.h"
 #include <vector>
 #endif
 #if defined(__APPLE__)
@@ -500,6 +501,79 @@ static void gxShowLauncherAgain()
 		_exit(0);
 	}
 	fprintf(stderr, "INFO: back from the launcher\n");
+}
+#endif
+
+#if defined(GX_HAS_IOS_LAUNCHER)
+// GeneralsX @feature iOS port 11/11/2026 The phone's trackpad while the picture is on an external
+// display (ExternalDisplayPad.swift): its fingers become SDL finger events of their own touch device,
+// and a mouse over it mouse events of its own id, so they reach SDL3GameEngine.cpp in order with
+// everything else. Called on the main thread from inside SDL's event pump.
+static void gxExternalPadInput(int32_t kind, uint64_t id, float x, float y)
+{
+	if (TheSDL3Window == nullptr) {
+		return;
+	}
+	SDL_Event e;
+	SDL_zero(e);
+	const SDL_WindowID windowID = SDL_GetWindowID(TheSDL3Window);
+	switch (kind) {
+	case GX_PAD_FINGER_DOWN:
+	case GX_PAD_FINGER_MOVE:
+	case GX_PAD_FINGER_UP:
+	case GX_PAD_FINGER_CANCEL:
+		e.type = kind == GX_PAD_FINGER_DOWN ? SDL_EVENT_FINGER_DOWN
+			: kind == GX_PAD_FINGER_MOVE ? SDL_EVENT_FINGER_MOTION
+			: kind == GX_PAD_FINGER_UP ? SDL_EVENT_FINGER_UP : SDL_EVENT_FINGER_CANCELED;
+		e.tfinger.timestamp = SDL_GetTicksNS();
+		e.tfinger.touchID = (SDL_TouchID)GX_EXTERNAL_PAD_TOUCH_ID;
+		e.tfinger.fingerID = (SDL_FingerID)id;
+		e.tfinger.x = x;
+		e.tfinger.y = y;
+		e.tfinger.pressure = (kind == GX_PAD_FINGER_UP || kind == GX_PAD_FINGER_CANCEL) ? 0.0f : 1.0f;
+		e.tfinger.windowID = windowID;
+		break;
+	case GX_PAD_HOVER:
+	{
+		int w = 0, h = 0;
+		SDL_GetWindowSize(TheSDL3Window, &w, &h);
+		e.type = SDL_EVENT_MOUSE_MOTION;
+		e.motion.timestamp = SDL_GetTicksNS();
+		e.motion.windowID = windowID;
+		e.motion.which = GX_EXTERNAL_PAD_MOUSE_ID;
+		e.motion.x = x * (float)w;
+		e.motion.y = y * (float)h;
+		break;
+	}
+	case GX_PAD_BUTTON_DOWN:
+	case GX_PAD_BUTTON_UP:
+		e.type = kind == GX_PAD_BUTTON_DOWN ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+		e.button.timestamp = SDL_GetTicksNS();
+		e.button.windowID = windowID;
+		e.button.which = GX_EXTERNAL_PAD_MOUSE_ID;
+		e.button.button = (Uint8)id;
+		e.button.down = kind == GX_PAD_BUTTON_DOWN;
+		e.button.clicks = 1;
+		break;
+	default:
+		return;
+	}
+	SDL_PushEvent(&e);
+}
+
+// GeneralsX @feature iOS port 11/11/2026 Hands the game's UIWindow to the external display support
+// once (ExternalDisplay.swift): with a display connected the window moves there now, before DXVK makes
+// its surface, so the swapchain is made for the display.
+static void gxStartExternalDisplay()
+{
+	static bool started = false;
+	if (started || TheSDL3Window == nullptr) {
+		return;
+	}
+	started = true;
+	void *uiwindow = SDL_GetPointerProperty(SDL_GetWindowProperties(TheSDL3Window), SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, nullptr);
+	gx_external_display_start(uiwindow, gxExternalPadInput);
+	gx_external_display_update();
 }
 #endif
 
@@ -1455,6 +1529,23 @@ int main(int argc, char* argv[])
 					}
 				}
 
+#if defined(GX_HAS_IOS_LAUNCHER)
+				// GeneralsX @feature iOS port 11/11/2026 External display (GXExternalDisplay.h): what was
+				// picked so far is the phone's resolution, to come back to when a display goes. With a
+				// display connected now the window goes there, and the game starts at the display's
+				// resolution: its own shape, capped at about 1080p (ExternalRenderSize).
+				gx_external_display_set_phone_resolution(xres, yres);
+				gxStartExternalDisplay();
+				{
+					int32_t displayW = 0, displayH = 0;
+					if (gx_external_display_start_resolution(&displayW, &displayH)) {
+						fprintf(stderr, "INFO: external display connected at start: resolution %dx%d instead of the phone's %dx%d\n",
+						        (int)displayW, (int)displayH, xres, yres);
+						xres = displayW;
+						yres = displayH;
+					}
+				}
+#endif
 				snprintf(xresVal, sizeof(xresVal), "%d", xres);
 				snprintf(yresVal, sizeof(yresVal), "%d", yres);
 
@@ -1474,6 +1565,11 @@ int main(int argc, char* argv[])
 				        xresVal, yresVal, winW, winH);
 			}
 		}
+#endif
+#if defined(GX_HAS_IOS_LAUNCHER)
+		// With -xres/-yres given on the command line the block above picks nothing: still hand over the
+		// window (a no-op when that block already did).
+		gxStartExternalDisplay();
 #endif
 		}
 

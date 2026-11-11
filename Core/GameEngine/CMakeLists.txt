@@ -140,6 +140,7 @@ set(GAMEENGINE_SRC
     Include/Common/GXCrcStream.h
     Include/Common/GXLogging.h
     Include/Common/GXRemoteConfig.h
+    Include/Common/GXExternalDisplay.h
     Include/Common/GXSafeArea.h
     Include/Common/XferCRC.h
     Include/Common/XferDeepCRC.h
@@ -1199,6 +1200,14 @@ target_precompile_headers(corei_gameengine_private INTERFACE
 target_include_directories(corei_gameengine_public INTERFACE
     Include
 )
+
+# GeneralsX @feature iOS port 11/11/2026 Common/GXExternalDisplay.h includes the launcher package's C
+# interface (gx_external_display.h), implemented in Swift and linked into the game (GeneralsMD/Code/Main).
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    target_include_directories(corei_gameengine_public INTERFACE
+        ${CMAKE_SOURCE_DIR}/ios/Launcher/GXLauncher/include
+    )
+endif()
 
 target_link_libraries(corei_gameengine_public INTERFACE
     core_compression

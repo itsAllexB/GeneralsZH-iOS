@@ -133,7 +133,9 @@ Bool LookAtTranslator::canScrollAtScreenEdge() const
 	// GeneralsX @feature Android port 05/10/2026 It is now (GXMouseMode.h): with a pointer --
 	// a mouse, or the touchpad's, which stays where it was left like a mouse's -- the edge
 	// scrolls as on a PC.
-	if (!GXMouseModeEnabled())
+	// GeneralsX @feature iOS port 11/11/2026 ...and on an external display, where the phone is a
+	// trackpad (GXPointerMode).
+	if (!GXPointerMode())
 		return false;
 	// GeneralsX @bugfix Android port 05/10/2026 ...and only that: the windowed/fullscreen choice
 	// below is a desktop option (Options.ini ScreenEdgeScrollMode), and the game window on a phone

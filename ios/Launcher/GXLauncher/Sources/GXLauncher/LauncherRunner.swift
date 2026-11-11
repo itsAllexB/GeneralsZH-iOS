@@ -97,6 +97,7 @@ enum LauncherRunner {
         if let skip = env["GX_LAUNCHER_SKIP"], !skip.isEmpty, skip != "0" {
             log("GX_LAUNCHER_SKIP set: applying saved settings without UI")
             let scene = waitForScene(timeout: 2)
+            if let scene { ExternalDisplay.shared.prepare(phone: scene) }
             applyOrientationPolicy(landscapeOnly: scene.map(isLandscapeOnly) ?? true)
             return finish(paths: paths, insets: measureInsets(in: scene),
                           maxFPS: maximumFramesPerSecond(scene, env: env))
@@ -105,6 +106,9 @@ enum LauncherRunner {
         guard let scene = waitForScene(timeout: nil) else {
             return finish(paths: paths, insets: nil, maxFPS: FrameRate.defaultRate)
         }
+        // GeneralsX @feature iOS port 11/11/2026 From here on a display connected to the phone gets a
+        // scene of the app's (ExternalDisplay.swift): a title card now, the game once it starts.
+        ExternalDisplay.shared.prepare(phone: scene)
         let maxFPS = maximumFramesPerSecond(scene, env: env)
         let landscapeOnly = isLandscapeOnly(scene)
         applyOrientationPolicy(landscapeOnly: landscapeOnly)

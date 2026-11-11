@@ -62,6 +62,8 @@
 #include "Common/GlobalData.h"
 #include "GXTrace.h"
 #include "Common/GXMouseMode.h"
+#include "Common/GXExternalDisplay.h"
+#include "GameClient/HeaderTemplate.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <cstdio>
@@ -140,6 +142,10 @@ static inline bool mobileShouldPauseRendering()
 	return s_appBackgrounded.load() || s_appInactive.load();
 }
 
+#if GX_HAS_EXTERNAL_DISPLAY
+static void applyExternalDisplayResolution();
+#endif
+
 // GeneralsX @build Android port ANGLE experiment - diagnostic logging for the
 // multi-second freeze reported with ANGLE enabled. Root-caused (by reading
 // SDL3's own source, third_party/fetchcontent-src/SDL3-src) to Android's
@@ -178,8 +184,17 @@ static bool SDLCALL mobileLifecycleWatcher(void *userdata, SDL_Event *event)
 		// window focus lost and applicationDidBecomeActive -> window focus gained.
 		// Stay paused until fully active again (focus regained), which arrives
 		// after DID_ENTER_FOREGROUND.
+		// GeneralsX @feature iOS port 11/11/2026 Not while the game's window is on an external display
+		// (GXExternalDisplay.h): it resigns key status on the way there and cannot be key on a display
+		// that takes no input, so it reports a focus loss that is no app going inactive. The app's
+		// own transitions still pause the game then: SDL reports the phone's scene resigning active as
+		// WILL_ENTER_BACKGROUND (handled above).
 		case SDL_EVENT_WINDOW_FOCUS_LOST:
 			logMobileLifecycleEvent("WINDOW_FOCUS_LOST");
+			if (GXPictureOnExternalDisplay()) {
+				fprintf(stderr, "[GX-LIFECYCLE] focus loss of the window on the external display: not a pause\n");
+				break;
+			}
 			s_appInactive.store(true);
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_GAINED:
@@ -1128,9 +1143,66 @@ namespace
 	}
 }
 
+#if GX_HAS_EXTERNAL_DISPLAY
+// GeneralsX @feature iOS port 11/11/2026 The picture moved to an external display or back
+// (GXExternalDisplay.h): the touchpad starts over in the new window, its pointer in the middle, with
+// no button left held.
+static void padPictureMoved(SDL_Window *window, bool away)
+{
+	if (s_pad.leftHeld && window != nullptr) {
+		padSendButton(window, SDL_BUTTON_LEFT, false, 1);
+	}
+	s_pad = TouchpadState();
+	fprintf(stderr, "INFO: external display: the picture is %s; the touchpad starts over\n",
+	        away ? "on the display (the phone is its trackpad)" : "back on the phone");
+}
+
+// GeneralsX @feature iOS port 11/11/2026 A mouse while the picture is on an external display: one
+// pointer with the touchpad's. A mouse over the phone's trackpad (GX_EXTERNAL_PAD_MOUSE_ID) puts the
+// pointer where it hovers on the picture and clicks there; a mouse SDL reports itself (its buttons
+// come through the GameController framework) clicks where the pointer is and moves it by its
+// motion. Returns FALSE for what it leaves to the mouse as usual (the wheel).
+static Bool handleExternalMouseEvent(SDL_Window *window, const SDL_Event &event)
+{
+	int winW = 0, winH = 0;
+	SDL_GetWindowSize(window, &winW, &winH);
+	if (winW <= 0 || winH <= 0) {
+		return FALSE;
+	}
+	if (!s_pad.havePointer) {
+		s_pad.pointerX = winW * 0.5f;
+		s_pad.pointerY = winH * 0.5f;
+		s_pad.havePointer = TRUE;
+	}
+	switch (event.type) {
+	case SDL_EVENT_MOUSE_MOTION:
+		if (event.motion.which == GX_EXTERNAL_PAD_MOUSE_ID) {
+			padMoveTo(window, event.motion.x, event.motion.y);
+		} else if (event.motion.xrel != 0.0f || event.motion.yrel != 0.0f) {
+			padSendMotion(window, event.motion.xrel, event.motion.yrel);
+		}
+		return TRUE;
+	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+	case SDL_EVENT_MOUSE_BUTTON_UP:
+		if (event.button.button == SDL_BUTTON_LEFT) {
+			s_pad.leftHeld = event.button.down;
+		}
+		padSendButton(window, event.button.button, event.button.down, event.button.clicks > 0 ? event.button.clicks : 1);
+		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+#endif
+
 // Returns TRUE when it clicked, with the pointer's position in game pixels in clickX/clickY: the
 // caller hands a text field under it the on-screen keyboard.
-Bool handleTouchpadEvent(SDL_Window *window, const SDL_Event &event, Int &clickX, Int &clickY)
+//
+// GeneralsX @feature iOS port 11/11/2026 externalPad: the fingers are the phone's while the picture is
+// on an external display (GXExternalDisplay.h, the pad's coordinates already scaled to the display's
+// window). The finger is not on the picture then, so menus and the group panel do not take it
+// directly: everything is the touchpad.
+Bool handleTouchpadEvent(SDL_Window *window, const SDL_Event &event, Int &clickX, Int &clickY, Bool externalPad = FALSE)
 {
 	int winW = 0, winH = 0;
 	SDL_GetWindowSize(window, &winW, &winH);
@@ -1161,12 +1233,12 @@ Bool handleTouchpadEvent(SDL_Window *window, const SDL_Event &event, Int &clickX
 		s_pad.fx[i] = wx;
 		s_pad.fy[i] = wy;
 		if (s_pad.fingers == 1) {
-			s_pad.panel = !padMenuTakesFinger() && padFingerOnGroupPanel(window, wx, wy);
+			s_pad.panel = !externalPad && !padMenuTakesFinger() && padFingerOnGroupPanel(window, wx, wy);
 			if (s_pad.panel) {
 				s_pad.savedX = s_pad.pointerX;
 				s_pad.savedY = s_pad.pointerY;
 			}
-			s_pad.direct = s_pad.panel || padMenuTakesFinger();
+			s_pad.direct = !externalPad && (s_pad.panel || padMenuTakesFinger());
 			if (s_pad.direct) {
 				padMoveTo(window, wx, wy);
 				padSendButton(window, SDL_BUTTON_LEFT, true, 1);
@@ -2411,7 +2483,8 @@ void enforceNoPointerScrollWithoutFinger()
 	// down (SDL's own mouse state; the touchpad's events never enter it) it cannot be legitimate.
 	// GeneralsX @bugfix Android port 18/10/2026 The same for a real mouse without that mode (issue
 	// #47: "the mouse cannot move around the map"): it rests at the edge with no finger down too.
-	if (GXMouseModeEnabled() || SDL3Mouse::hardwareMouseActive()) {
+	// GeneralsX @feature iOS port 11/11/2026 And with the picture on an external display (GXPointerMode).
+	if (GXPointerMode() || SDL3Mouse::hardwareMouseActive()) {
 		if (TheLookAtTranslator->isRightButtonScrollActive() &&
 		    (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK) == 0) {
 			fprintf(stderr, "[gxtouch] cancelling a right-button scroll with no right button down\n");
@@ -2763,6 +2836,14 @@ void SDL3GameEngine::update(void)
 	}
 	s_wasPausedLastFrame = pausedNow;
 #endif
+#if GX_HAS_EXTERNAL_DISPLAY
+	// GeneralsX @feature iOS port 11/11/2026 External display (GXExternalDisplay.h): keep the game's
+	// view at the display's capped scale, and the resolution where the display wants it.
+	gx_external_display_update();
+	if (!pausedNow) {
+		applyExternalDisplayResolution();
+	}
+#endif
 #if defined(__ANDROID__)
 	// GeneralsX @bugfix Android port 28/09/2026 Game speed above the screen's refresh rate. The
 	// skirmish Game Speed slider raises the frame-rate limit, and logic runs one step per
@@ -2807,6 +2888,108 @@ void SDL3GameEngine::update(void)
 		GXLauncherHook()();
 	}
 }
+
+#if GX_HAS_EXTERNAL_DISPLAY
+// GeneralsX @feature iOS port 11/11/2026 The game's resolution follows the external display the
+// picture is on, and goes back to the phone's once the display has stayed away (ExternalDisplay.swift
+// decides which, ResolutionPlan). It changes the way the Options menu changes it
+// (OptionsMenu.cpp, saveOptions), without saving it in Options.ini: a display is no setting.
+//
+// Only at the main menu, where the Options menu may change it as well: the original game greys the
+// resolution out during a match, and a lobby or setup screen would be rebuilt from its .wnd by
+// recreateWindowLayouts() and lose what was chosen on it. Anywhere else the picture keeps its
+// resolution and is fitted into the window with bars (DX8Wrapper's pillarbox) until the player is back
+// at the main menu.
+//
+// Only a change of what the display side wants is acted on, once: the resolution the game started
+// with is taken as wanted, so a resolution the player picks in the Options menu later stays, with or
+// without a display ever connected.
+static void applyExternalDisplayResolution()
+{
+	static int32_t s_seenW = -1;
+	static int32_t s_seenH = -1;
+	static bool s_pending = false;
+	static int s_deferredW = 0;
+	static int s_deferredH = 0;
+	int32_t wantedW = 0;
+	int32_t wantedH = 0;
+	if (!gx_external_display_wanted_resolution(&wantedW, &wantedH) || wantedW <= 0 || wantedH <= 0) {
+		return;
+	}
+	if (s_seenW < 0) {
+		if (TheDisplay == nullptr) {
+			return;
+		}
+		// The resolution the game started with stands for what was wanted then; a display that
+		// connected after SDL3Main picked it is a change.
+		s_seenW = (int32_t)TheDisplay->getWidth();
+		s_seenH = (int32_t)TheDisplay->getHeight();
+	}
+	if (wantedW != s_seenW || wantedH != s_seenH) {
+		s_seenW = wantedW;
+		s_seenH = wantedH;
+		s_pending = true;
+	}
+	if (!s_pending) {
+		return;
+	}
+	if (TheDisplay == nullptr || TheGameLogic == nullptr || TheShell == nullptr || TheWritableGlobalData == nullptr) {
+		return;
+	}
+	const Int currentW = (Int)TheDisplay->getWidth();
+	const Int currentH = (Int)TheDisplay->getHeight();
+	if (currentW == wantedW && currentH == wantedH) {
+		s_pending = false;
+		s_deferredW = s_deferredH = 0;
+		return;
+	}
+	const Bool inMatch = TheGameLogic->isInGame() && !TheGameLogic->isInShellGame();
+	WindowLayout *options = TheShell->getOptionsLayout(FALSE);
+	const Bool atMainMenu = TheShell->isShellActive() && TheShell->getScreenCount() <= 1
+		&& !inMatch && !TheGameLogic->isLoadingMap()
+		&& (options == nullptr || options->isHidden())
+		&& (TheWindowManager == nullptr || !TheWindowManager->winHasModal());
+	if (!atMainMenu) {
+		if (s_deferredW != wantedW || s_deferredH != wantedH) {
+			s_deferredW = wantedW;
+			s_deferredH = wantedH;
+			fprintf(stderr, "INFO: external display: resolution %dx%d wanted, %dx%d kept until the main menu (%s); the picture is fitted with bars\n",
+			        (int)wantedW, (int)wantedH, (int)currentW, (int)currentH,
+			        inMatch ? "in a match" : "not at the main menu");
+		}
+		return;
+	}
+	s_deferredW = s_deferredH = 0;
+	s_pending = false;
+
+	const Int bitDepth = TheDisplay->getBitDepth();
+	if (!TheDisplay->setDisplayMode((UnsignedInt)wantedW, (UnsignedInt)wantedH, bitDepth, TheDisplay->getWindowed())) {
+		fprintf(stderr, "WARNING: external display: the resolution could not change to %dx%d; %dx%d stays\n",
+		        (int)wantedW, (int)wantedH, (int)currentW, (int)currentH);
+		return;
+	}
+	TheWritableGlobalData->m_xResolution = wantedW;
+	TheWritableGlobalData->m_yResolution = wantedH;
+	if (TheHeaderTemplateManager != nullptr) {
+		TheHeaderTemplateManager->onResolutionChanged();
+	}
+	if (TheMouse != nullptr) {
+		TheMouse->onResolutionChanged();
+	}
+	TheShell->recreateWindowLayouts();
+	if (TheInGameUI != nullptr) {
+		TheInGameUI->recreateControlBar();
+		TheInGameUI->refreshCustomUiResources();
+	}
+	if (TheTacticalView != nullptr) {
+		TheTacticalView->setCameraHeightAboveGroundLimitsToDefault();
+		TheTacticalView->setZoomToMax();
+	}
+	fprintf(stderr, "INFO: external display: resolution %dx%d -> %dx%d (%s)\n",
+	        (int)currentW, (int)currentH, (int)wantedW, (int)wantedH,
+	        gx_external_display_picture_away() ? "the display's" : "the phone's again");
+}
+#endif
 
 /**
  * From GameEngine: execute() - main game loop
@@ -2863,6 +3046,17 @@ void SDL3GameEngine::pollSDL3Events(void)
 	}
 #endif
 
+#if GX_HAS_EXTERNAL_DISPLAY
+	{
+		static bool s_pictureWasAway = false;
+		const bool away = GXPictureOnExternalDisplay();
+		if (away != s_pictureWasAway) {
+			s_pictureWasAway = away;
+			padPictureMoved(m_SDLWindow, away);
+		}
+	}
+#endif
+
 	updateTextInputState();
 
 	SDL_Event event;
@@ -2885,6 +3079,11 @@ void SDL3GameEngine::pollSDL3Events(void)
 				break;
 
 			case SDL_EVENT_WINDOW_FOCUS_LOST:
+				// GeneralsX @feature iOS port 11/11/2026 See mobileLifecycleWatcher: the window on an
+				// external display cannot keep key status, and the game goes on.
+				if (GXPictureOnExternalDisplay()) {
+					break;
+				}
 				m_IsActive = false;
 				if (m_IsTextInputActive) {
 					SDL_StopTextInput(m_SDLWindow);
@@ -2998,6 +3197,14 @@ void SDL3GameEngine::pollSDL3Events(void)
 					break;
 				}
 #endif
+#if GX_HAS_EXTERNAL_DISPLAY
+				if (event.motion.which == GX_EXTERNAL_PAD_MOUSE_ID && !GXPictureOnExternalDisplay()) {
+					break;	// left over from the pad after the picture came back
+				}
+				if (GXPictureOnExternalDisplay() && m_SDLWindow && handleExternalMouseEvent(m_SDLWindow, event)) {
+					break;
+				}
+#endif
 				// Fighter19 pattern: direct addSDLEvent() call with raw SDL_Event
 				// GeneralsX @refactor felipebraz 16/02/2026 Simplified event routing
 				if (TheMouse) {
@@ -3029,6 +3236,30 @@ void SDL3GameEngine::pollSDL3Events(void)
 				// Dismissing it and tapping anything brought it straight back.
 				// GeneralsX @feature Android port 05/10/2026 With a pointer chosen in the launcher a
 				// finger is a touchpad (handleTouchpadEvent), and the native touch layer stays out.
+#if GX_HAS_EXTERNAL_DISPLAY
+				// GeneralsX @feature iOS port 11/11/2026 With the picture on an external display the
+				// fingers are the phone's trackpad (its own touch device, GXExternalDisplay.h). A gesture
+				// on the game's own view when the picture left ends as a cancel; anything else from it, and
+				// the pad's events once the picture is back, mean nothing.
+				if (GXPictureOnExternalDisplay() || event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
+					if (event.tfinger.touchID == GX_EXTERNAL_PAD_TOUCH_ID) {
+						Int clickX = 0, clickY = 0;
+						if (GXPictureOnExternalDisplay() && m_SDLWindow) {
+							handleTouchpadEvent(m_SDLWindow, event, clickX, clickY, TRUE);
+						}
+					} else if (m_SDLWindow && (event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED)) {
+						SDL_Event cancel = event;
+						cancel.type = SDL_EVENT_FINGER_CANCELED;
+						if (GXMouseModeEnabled()) {
+							Int clickX = 0, clickY = 0;
+							handleTouchpadEvent(m_SDLWindow, cancel, clickX, clickY);
+						} else {
+							handleTouchEvent(m_SDLWindow, cancel);
+						}
+					}
+					break;
+				}
+#endif
 				if (GXMouseModeEnabled()) {
 					Int clickX = 0, clickY = 0;
 					if (m_SDLWindow && handleTouchpadEvent(m_SDLWindow, event, clickX, clickY)) {

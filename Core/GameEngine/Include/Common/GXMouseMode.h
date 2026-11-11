@@ -29,6 +29,7 @@
 #pragma once
 
 #include "Common/GXSettingsPath.h"
+#include "Common/GXExternalDisplay.h"
 
 #if GX_HAS_SETTINGS_DIR
 #include <cstdio>
@@ -81,4 +82,12 @@ inline bool GXMouseModeEnabled()
 #else
 	return false;
 #endif
+}
+
+// GeneralsX @feature iOS port 11/11/2026 Whether the game has a pointer: the player chose one in the
+// launcher, or the picture is on an external display and the phone is its trackpad
+// (GXExternalDisplay.h). Every reader that asks "is there a pointer" asks this.
+inline bool GXPointerMode()
+{
+	return GXMouseModeEnabled() || GXPictureOnExternalDisplay();
 }

@@ -1,0 +1,38 @@
+GeneralsX @feature iOS port 11/11/2026 SDL_GetWindowSizeInPixels follows the Metal view's scale.
+
+On iOS SDL computes a window's pixel size as its view's points times the screen's native scale,
+and gives its Metal view (SDL_Metal_CreateView, which DXVK's surface uses) that same scale once,
+when it makes it. The external display support (ios/Launcher/GXLauncher, ExternalDisplay.swift)
+moves the game's window to a monitor and lowers the Metal view's scale so the drawable is at most
+about 1080p; the window's pixel size must say the same, or DXVK presents into a region of the
+window's size that the smaller swapchain does not have, and the engine sizes its backbuffer wrong.
+With no change to the layer's scale this reports exactly what SDL reported before.
+Applied by cmake/sdl3.cmake (iOS only).
+
+--- a/src/video/uikit/SDL_uikitwindow.m
++++ b/src/video/uikit/SDL_uikitwindow.m
+@@ -33,6 +33,7 @@
+ #include "SDL_uikitappdelegate.h"
+ #include "SDL_uikitview.h"
+ #include "SDL_uikitopenglview.h"
++#include "SDL_uikitmetalview.h"
+ 
+ #include <Foundation/Foundation.h>
+ 
+@@ -454,7 +455,16 @@
+ #else
+             scale = 2.0;
+ #endif
++        }
++
++#if defined(SDL_VIDEO_VULKAN) || defined(SDL_VIDEO_METAL)
++        /* A Metal view's drawable is its bounds times its layer's scale (SDL_uikitmetalview.m), which
++         * the app may set apart from the screen's: report that, so the window's pixel size and the
++         * drawable agree. Unchanged otherwise: SDL gives the layer the scale computed above. */
++        if ([view isKindOfClass:[SDL_uikitmetalview class]]) {
++            scale = view.layer.contentsScale;
+         }
++#endif
+ 
+ 
+         /* Integer truncation of fractional values matches SDL_uikitmetalview and

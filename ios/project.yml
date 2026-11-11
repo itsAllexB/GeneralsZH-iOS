@@ -48,6 +48,12 @@ targets:
             UIWindowSceneSessionRoleApplication:
               - UISceneConfigurationName: Default Configuration
                 UISceneDelegateClassName: SDLUIKitSceneDelegate
+            # A monitor or TV (USB-C, AirPlay) up to iOS 26: the game's picture goes there and the phone
+            # becomes its trackpad (ios/Launcher/GXLauncher, ExternalDisplay.swift). iOS 27 offers that
+            # scene only to the scene accessory the app registers at run time.
+            UIWindowSceneSessionRoleExternalDisplayNonInteractive:
+              - UISceneConfigurationName: External Display
+                UISceneDelegateClassName: GXExternalDisplaySceneDelegate
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
         CADisableMinimumFrameDurationOnPhone: true

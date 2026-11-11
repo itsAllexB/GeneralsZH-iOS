@@ -37,6 +37,9 @@ choose it in the launcher.
   swipe, so a palm on the edge doesn't interrupt a match.
 - **Landscape** on iPhones and iPads (both directions); the iPhone Duo's inner display, which
   ignores orientation locks, keeps every orientation.
+- **External display** — plug in a monitor or TV (USB-C, or AirPlay) at any time and the game
+  moves there in the display's own shape, while the phone becomes a trackpad (see
+  [External display](#external-display)).
 
 ## Install
 
@@ -125,6 +128,35 @@ come from the Android port:
 | Force-attack / waypoint buttons on the command bar | The touch equivalents of Ctrl-click and Alt-click |
 
 Details: [`docs/port/TOUCH_CONTROLS.md`](docs/port/TOUCH_CONTROLS.md).
+
+## External display
+
+Connect a monitor or TV — by USB-C, or AirPlay — at the menus, mid-match or before starting, and
+the game appears on it full screen instead of a mirror of the phone. Unplug it and the game is back
+on the phone with its touch controls. Nothing changes when no display is connected.
+
+- **Picture.** The game renders in the display's own shape: 1920x1080 on a 1080p or 4K screen
+  (a 4K picture costs four times the GPU time; `GXExternalMaxHeight = 1440` in Options.ini raises
+  the cap, up to 2160), 1440x1080 on a 1600x1200 one, and never more than the display's own pixels. The resolution follows the display at the main
+  menu; plugged in during a match, the match keeps its resolution and is fitted with bars until you
+  are back at the main menu. A display smaller than 600 lines keeps the game's resolution, fitted
+  with bars.
+- **The phone is the trackpad** while the picture is on the display:
+
+  | Gesture | Action |
+  |---|---|
+  | Move one finger | Move the pointer |
+  | Tap | Click |
+  | Two-finger tap | Right-click |
+  | Tap, then touch again and drag | Hold the left button: selection box, drag |
+  | Two fingers | Drag to scroll the map, pinch to zoom |
+  | Pointer at a screen edge | Scroll the map, as on a PC |
+
+  A connected keyboard keeps working; a mouse moves the pointer over the phone and clicks where
+  iOS gives apps a pointer. Sound stays where iOS routes it. Typing into the game's text fields with
+  the on-screen keyboard needs the picture on the phone.
+- **App switches** take the picture back to the phone for a moment (iOS does that); the
+  resolution changes only when the display has really gone.
 
 ## Launcher
 

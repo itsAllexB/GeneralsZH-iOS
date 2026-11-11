@@ -583,7 +583,9 @@ void SDL3Mouse::createStreamMessages()
 	// launcher (GXMouseMode.h, issue #39). Then the events in this object's buffer -- a real
 	// mouse's, and the touchpad's -- become the same raw mouse messages they do on a PC, and the
 	// touch layer stays out of the way (SDL3GameEngine.cpp sends fingers to the touchpad instead).
-	if (GXMouseModeEnabled()) {
+	// GeneralsX @feature iOS port 11/11/2026 The same while the picture is on an external display:
+	// the phone is its trackpad, and a mouse drives the same pointer (GXPointerMode).
+	if (GXPointerMode()) {
 		Mouse::createStreamMessages();
 	}
 }
@@ -652,7 +654,12 @@ static Image *gxCursorFrameImage(SDL_Surface *frame, TextureClass **outTexture)
 void SDL3Mouse::draw()
 {
 	Mouse::draw();
-	if (!GXMouseModeEnabled() || !m_touchpadPointer || TheDisplay == nullptr) {
+	// GeneralsX @feature iOS port 11/11/2026 On an external display the game draws the pointer for
+	// a mouse too: the system draws one only on the phone's own screen.
+	if (!GXPointerMode() || TheDisplay == nullptr) {
+		return;
+	}
+	if (!m_touchpadPointer && !GXPictureOnExternalDisplay()) {
 		return;
 	}
 	if (m_currentCursor == NONE) {

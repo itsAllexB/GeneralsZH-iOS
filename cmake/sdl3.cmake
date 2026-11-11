@@ -31,10 +31,19 @@ if(SAGE_USE_SDL3)
         set(SDL3_URL_HASH "SHA256=e86bdae9c65388575b5e321b9f40641b503cb01d07503f428849bd99e90a56ce")
     endif()
     
+    set(SDL3_PATCH_ARGS "")
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # GeneralsX @feature iOS port 11/11/2026 The window's pixel size follows its Metal view's scale,
+        # which the external display support lowers on a monitor (ios/Launcher/GXLauncher,
+        # ExternalDisplay.swift). Applied once, right after the source is unpacked.
+        set(SDL3_PATCH_ARGS PATCH_COMMAND patch -p1 --forward -i "${CMAKE_SOURCE_DIR}/Patches/sdl3-ios-metal-view-pixel-size.patch")
+    endif()
+
     FetchContent_Declare(
         SDL3
         URL ${SDL3_URL}
         URL_HASH ${SDL3_URL_HASH}
+        ${SDL3_PATCH_ARGS}
     )
     
     # Configure SDL3 build options
