@@ -101,6 +101,9 @@ public:
 
 	// SDL3 specific
 	virtual SDL_Window* getSDLWindow(void) const { return m_SDLWindow; }
+	// GeneralsX @feature iOS port 11/11/2026 One finger event for the touch controls or the touchpad
+	// (mobile only; replayed by the mouse-touch classifier, GXMouseTouch.h).
+	void processFingerEvent(const SDL_Event &event);
 
 protected:
 	SDL_Window*		m_SDLWindow;

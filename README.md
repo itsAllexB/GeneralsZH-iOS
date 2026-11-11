@@ -37,6 +37,11 @@ choose it in the launcher.
   swipe, so a palm on the edge doesn't interrupt a match.
 - **Landscape** on iPhones and iPads (both directions); the iPhone Duo's inner display, which
   ignores orientation locks, keeps every orientation.
+- **Keyboard and mouse** — a Bluetooth or USB keyboard and mouse work as on a PC, on the phone and
+  on an external display (see [Keyboard and mouse](#keyboard-and-mouse)).
+- **External display** — plug in a monitor or TV (USB-C, or AirPlay) at any time and the game
+  moves there in the display's own shape, while the phone becomes a trackpad (see
+  [External display](#external-display)).
 
 ## Install
 
@@ -125,6 +130,62 @@ come from the Android port:
 | Force-attack / waypoint buttons on the command bar | The touch equivalents of Ctrl-click and Alt-click |
 
 Details: [`docs/port/TOUCH_CONTROLS.md`](docs/port/TOUCH_CONTROLS.md).
+
+## External display
+
+Connect a monitor or TV — by USB-C, or AirPlay — at the menus, mid-match or before starting, and
+the game appears on it full screen instead of a mirror of the phone. Unplug it and the game is back
+on the phone with its touch controls. Nothing changes when no display is connected.
+
+- **Picture.** The game renders in the display's own shape: 1920x1080 on a 1080p or 4K screen
+  (a 4K picture costs four times the GPU time; `GXExternalMaxHeight = 1440` in Options.ini raises
+  the cap, up to 2160), 1440x1080 on a 1600x1200 one, and never more than the display's own pixels. The resolution follows the display at the main
+  menu; plugged in during a match, the match keeps its resolution and is fitted with bars until you
+  are back at the main menu. A display smaller than 600 lines keeps the game's resolution, fitted
+  with bars.
+- **The phone is the trackpad** while the picture is on the display:
+
+  | Gesture | Action |
+  |---|---|
+  | Move one finger | Move the pointer |
+  | Tap | Click |
+  | Two-finger tap | Right-click |
+  | Tap, then touch again and drag | Hold the left button: selection box, drag |
+  | Two fingers | Drag to scroll the map, pinch to zoom |
+  | Pointer at a screen edge | Scroll the map, as on a PC |
+
+  A keyboard and mouse work there too (see below). Sound stays where iOS routes it. Without a
+  hardware keyboard, typing into the game's text fields needs the picture on the phone (the
+  on-screen keyboard cannot show on the display).
+- **App switches** take the picture back to the phone for a moment (iOS does that); the
+  resolution changes only when the display has really gone.
+
+## Keyboard and mouse
+
+Bluetooth, or plugged into a USB-C hub (with or without a display on the same hub); several at
+once, connected and disconnected at any time.
+
+- **Keyboard:** every key and hotkey the game has, with Ctrl, Shift and Alt (control groups, queued
+  orders, waypoints), the function keys, the arrows to scroll the map, Escape, Tab, Space, Enter;
+  held keys repeat as the game repeats them. Typing goes into the game's text fields (player name,
+  chat, save names) as soon as one has focus, without the on-screen keyboard — also with the picture
+  on an external display. Keys iOS keeps for itself (the Globe key, Command-Tab, Command-H, …)
+  never reach the game.
+- **Mouse:** moving it shows the game's own pointer, which it drives directly: left and right
+  click, double click, the middle button, drag for a selection box, the wheel to zoom, and the
+  pointer at a screen edge scrolls the map. A finger on the screen gives the touch controls back; the
+  mouse takes over again when it moves. With the picture on a display the phone's trackpad and the
+  mouse move the same pointer.
+- **On an iPhone the mouse needs AssistiveTouch** (Settings › Accessibility › Touch ›
+  AssistiveTouch): iOS gives apps a mouse only through it, and nothing an app can do changes that.
+  With it on, the game reads the mouse's motion through the GameController framework and its buttons
+  either from there or from the touches AssistiveTouch makes for them: a press that moves with the
+  mouse is a held button (selection box, right-drag to scroll the map), a quick one a click. A
+  finger on the screen within two seconds of moving the mouse may be taken for the mouse's button.
+- **What iOS does not let an iPhone app change:** the AssistiveTouch pointer stays on the phone's
+  screen and moves with the mouse (iOS does not lock it to an app, and the game cannot hide it). The
+  game asks iOS to ignore the first swipe from a screen edge, so the pointer reaching an edge does
+  not open Notification Center or Control Center at once, but a second one does.
 
 ## Launcher
 

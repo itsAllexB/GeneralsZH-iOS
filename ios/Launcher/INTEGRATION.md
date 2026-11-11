@@ -169,6 +169,7 @@ Swift runtime notes:
 | `SDL_AUDIO_CATEGORY` | always | `playback` (Home > Play sound in silent mode, default ON) or `ambient` | SDL3 audio (UIKit backend) |
 | `GENERALSX_BUNDLED_FONTS_DIR` | only when the support files could not be copied into the game folder | `<App>.app/GameSupport/fonts` | render2dsentence.cpp (searched after the game folder's `fonts/`) |
 | `DXVK_CONFIG_FILE` | same | `<App>.app/GameSupport/dxvk.conf` | DXVK |
+| `GX_EXTERNAL_MAX_HEIGHT` | Options.ini has `GXExternalMaxHeight` in 720..2160 | e.g. `1440` | ExternalDisplay.swift: the cap of the game's drawable on an external display (1080 without) |
 
 Before returning, `gx_launcher_run()` also configures the audio session (errors are logged, the
 launch never fails): sound in silent mode ON -> `AVAudioSession.setCategory(.playback, mode:
@@ -260,6 +261,7 @@ first 60,000 + last 140,000 bytes shown, Share sends the whole file, Clear delet
 | Key | UI | Range / step | Default shown | Notes |
 |---|---|---|---|---|
 | `GXUiScale` | Interface > Interface Size | 70..200, step 10 | 100 (missing/unparsable) | clamped on read (Android's slider starts at 100; iOS can shrink to 70) |
+| `GXExternalMaxHeight` | none (edit Options.ini) | 720..2160 lines | 1080 | the external display's drawable: the display's shape, at most this high and at most as many pixels as a 16:9 picture this high |
 | `ResolutionFontAdjustment` | Interface > Menu Text Size | 0..150, step 10 (Android: 1) | 70 (missing, unparsable or negative) | the in-game Options menu writes -100 for "default"; shown as 70. A stored value off the step (e.g. 85) is shown as is and only rewritten when the slider moves |
 
 Editing is **line-preserving**: only the value on the line(s) carrying the key changes (the key
@@ -299,6 +301,79 @@ the engine could instead call SDL3's `SDL_GetWindowSafeArea()` once the window i
 - iOS builds use the system allocator (`RTS_GAMEMEMORY_ENABLE=OFF`): the game's pool replaces
   `operator new`/`delete` process-wide and is not thread-safe, which crashed SwiftUI's
   multithreaded text rendering.
+
+## 5a. External display (`include/gx_external_display.h`)
+
+A monitor or TV (USB-C, AirPlay) gets the game's picture instead of a mirror of the phone, and the
+phone becomes its trackpad. The UIKit side is in this package (`ExternalDisplay.swift`,
+`ExternalDisplayPad.swift`), the decisions in `GXLauncherCore/ExternalDisplayPlan.swift` (unit
+tested), the engine side behind `Common/GXExternalDisplay.h`.
+
+- **Scenes.** Up to iOS 26 the display's scene comes from Info.plist (role
+  `UIWindowSceneSessionRoleExternalDisplayNonInteractive`, class `GXExternalDisplaySceneDelegate`,
+  `ios/project.yml`). iOS 27 offers it only to a scene accessory (`registerSceneAccessory:`), which
+  the pad's view controller registers when `gx_launcher_run()` first has a scene. That controller's
+  window must be on screen for the registration to count (a hidden window's never got a scene in
+  the Simulator), so it sits just below SDL's window, covered by it while the game is on the phone.
+- **Before the game's window exists** (the launcher, the game starting) the display shows a title
+  card. `SDL3Main.cpp` calls `gx_external_display_start()` right after `SDL_CreateWindow`, with
+  SDL's `UIWindow`; with a display connected the window moves to it then, and the game starts at
+  the display's resolution (`gx_external_display_start_resolution`).
+- **Moving the picture.** The game's `UIWindow` itself (SDL's view controller and the Metal view
+  DXVK renders into) changes `windowScene`. Its Metal view's scale is lowered so the drawable is at
+  most about 1080p (`GXExternalMaxHeight`); `Patches/sdl3-ios-metal-view-pixel-size.patch` makes
+  `SDL_GetWindowSizeInPixels` report that drawable, so DXVK's swapchain, the engine's backbuffer
+  and the game resolution agree. The engine's per-frame `Pillarbox_Process_Resize` re-creates the
+  backbuffer for the new window and fits the picture with bars until the resolution changes.
+- **Resolution.** `gx_external_display_wanted_resolution` is the display's while the picture is
+  there, the phone's once the display has stayed away 2 s with the app active (iOS removes the
+  display's scene whenever the app leaves the foreground). `SDL3GameEngine.cpp` applies a change at
+  the main menu only, as the Options menu does, without writing Options.ini.
+- **Input.** The pad's touches reach the engine through a C callback as SDL finger events of their
+  own touch device (`GX_EXTERNAL_PAD_TOUCH_ID`), a mouse over the pad as mouse events
+  (`GX_EXTERNAL_PAD_MOUSE_ID`). While the picture is away the game has a pointer
+  (`GXPointerMode()`, `GXMouseMode.h`) and the touchpad of the "Mouse and touchpad" mode drives it,
+  without its direct menu taps.
+- **Focus.** The game's window loses key status on its way to the display; the engine does not take
+  that for the app going inactive (`mobileLifecycleWatcher`). The phone scene's own resign/become
+  active still pause and resume it (SDL reports those as background/foreground).
+
+Simulator harness: `ios/tests/external-display/README.md`.
+
+## 5b. Hardware keyboard and mouse (`include/gx_hardware_input.h`)
+
+`HardwareInput.swift`, decisions in `GXLauncherCore/HardwareInputPlan.swift` (unit tested), engine
+side in `SDL3GameEngine.cpp` / `SDL3Main.cpp` / `SDL3Mouse.cpp` behind `Common/GXExternalDisplay.h`.
+
+- **Keys** are SDL's own: its UIKit backend reads every connected keyboard through
+  `GCKeyboard.coalesced` and posts key events with or without window focus, so they reach the engine
+  on the phone and with the picture on a display. The engine repeats held keys itself.
+- **Text.** SDL types only through its hidden `UITextField`, opened by a tap, and that field cannot
+  take input on a display that takes none. With a hardware keyboard connected the engine calls
+  `gx_hardware_text_input(true)` while a text field has focus: a responder without `UIKeyInput` (no
+  on-screen keyboard) becomes first responder in the window that has the keyboard (the game's, or the
+  pad's while the picture is away) and passes each press's `UIKey.characters` to the engine as
+  `SDL_EVENT_TEXT_INPUT`. Shortcuts (Control, Command) and non-text keys are left to the key events.
+- **Mouse.** SDL moves its pointer only from UIKit's pointer events over its view and takes
+  GameController's raw motion only in relative mode, which needs keyboard focus. So every `GCMouse`
+  is driven from `HardwareInput.swift` (raw motion scaled to the game window, buttons merged across
+  mice, the wheel), replacing SDL's handlers (taken back each frame if SDL re-installs them on a
+  reconnect). Events arrive as SDL mouse events of id `GX_HARDWARE_MOUSE_ID` and move the touchpad's
+  pointer, which the game draws (`GXPointerMode()`, `GXHardwareMousePointer()`); a finger on the
+  game's own view gives the touch controls back. SDL's own pointer events are dropped while a mouse
+  is connected. The system pointer is hidden over the game's view (`SDL_HideCursor`) and the lock is
+  requested (SDL's relative mode on the phone, the pad's `prefersPointerLocked` with the picture
+  away); `hardware input: pointer lock granted / not granted` in the log says what iOS did.
+
+- **AssistiveTouch (iPhone).** An iPhone gives apps a mouse only through AssistiveTouch. GameController
+  still reports its motion, but its buttons arrive as direct touches where the AssistiveTouch pointer
+  is (seen on the iPhone Duo: `pad finger N down` for each click). `GXMouseTouch.h` decides, while a
+  mouse is connected, which touches are the mouse's buttons (they move with GameController motion, or
+  are held still, or are quick clicks) and which are fingers (they move on their own), and merges
+  touch-made presses with GameController's own button reports so one press counts once. Unit tests:
+  `ios/tests/hardware-input/run.sh`. Log lines: `hardware mouse: button N down, from a touch
+  (AssistiveTouch) / GameController`, `GameController button N down`, and for the pad's first touches
+  their type and button mask.
 
 ## 6. Behaviour decisions where Android was ambiguous
 

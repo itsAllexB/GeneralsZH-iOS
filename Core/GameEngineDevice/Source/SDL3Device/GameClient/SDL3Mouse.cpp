@@ -428,6 +428,10 @@ void SDL3Mouse::reset(void)
 	Mouse::reset();
 
 	releaseCapture();
+#if GX_HAS_EXTERNAL_DISPLAY
+	// GeneralsX @feature iOS port 11/11/2026 Not over a hardware mouse's game-drawn pointer (setVisibility).
+	if (!GXHardwareMouseConnected())
+#endif
 	SDL_ShowCursor();
 	m_IsVisible = true;
 
@@ -536,6 +540,13 @@ void SDL3Mouse::setVisibility(Bool visible)
 	m_IsVisible = visible;
 
 	// Always keep SDL cursor visible since it's the only cursor renderer.
+	// GeneralsX @feature iOS port 11/11/2026 ...except with a hardware mouse on iOS, where the game draws
+	// its own pointer and the system's stays hidden (SDL3GameEngine.cpp, syncHardwarePointer).
+#if GX_HAS_EXTERNAL_DISPLAY
+	if (GXHardwareMouseConnected()) {
+		return;
+	}
+#endif
 	SDL_ShowCursor();
 }
 
@@ -583,7 +594,9 @@ void SDL3Mouse::createStreamMessages()
 	// launcher (GXMouseMode.h, issue #39). Then the events in this object's buffer -- a real
 	// mouse's, and the touchpad's -- become the same raw mouse messages they do on a PC, and the
 	// touch layer stays out of the way (SDL3GameEngine.cpp sends fingers to the touchpad instead).
-	if (GXMouseModeEnabled()) {
+	// GeneralsX @feature iOS port 11/11/2026 The same while the picture is on an external display:
+	// the phone is its trackpad, and a mouse drives the same pointer (GXPointerMode).
+	if (GXPointerMode()) {
 		Mouse::createStreamMessages();
 	}
 }
@@ -652,7 +665,12 @@ static Image *gxCursorFrameImage(SDL_Surface *frame, TextureClass **outTexture)
 void SDL3Mouse::draw()
 {
 	Mouse::draw();
-	if (!GXMouseModeEnabled() || !m_touchpadPointer || TheDisplay == nullptr) {
+	// GeneralsX @feature iOS port 11/11/2026 On an external display the game draws the pointer for
+	// a mouse too: the system draws one only on the phone's own screen.
+	if (!GXPointerMode() || TheDisplay == nullptr) {
+		return;
+	}
+	if (!m_touchpadPointer && !GXPictureOnExternalDisplay()) {
 		return;
 	}
 	if (m_currentCursor == NONE) {
@@ -952,6 +970,16 @@ void SDL3Mouse::translateWheelEvent(const SDL_MouseWheelEvent& event, MouseIO *r
 
 	result->pos.x = (Int)mouseX;
 	result->pos.y = (Int)mouseY;
+#if (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || defined(__ANDROID__)
+	// GeneralsX @feature iOS port 11/11/2026 The touchpad's pointer (and a hardware mouse driving it,
+	// SDL3GameEngine.cpp) is not SDL's: its wheel events carry where it is, in window points.
+	if (event.which == TOUCHPAD_MOUSE_ID) {
+		int scaledX = 0, scaledY = 0;
+		scaleMouseCoordinates((int)event.mouse_x, (int)event.mouse_y, event.windowID, scaledX, scaledY);
+		result->pos.x = scaledX;
+		result->pos.y = scaledY;
+	}
+#endif
 	result->deltaPos.x = 0;
 	result->deltaPos.y = 0;
 	// GeneralsX @bugfix felipebraz 18/02/2026 Normalize timestamp to milliseconds (SDL3 uses nanoseconds)

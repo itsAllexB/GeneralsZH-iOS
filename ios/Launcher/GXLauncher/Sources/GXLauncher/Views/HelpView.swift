@@ -39,6 +39,15 @@ struct HelpView: View {
                 Text(L("About"))
             }
 
+            // GeneralsX @feature iOS port 11/11/2026 Keyboard and mouse (HardwareInput.swift): on an
+            // iPhone iOS gives apps a mouse only through AssistiveTouch.
+            Section {
+                Label(L("A Bluetooth or USB keyboard and mouse work as on a PC. On an iPhone, turn on AssistiveTouch (Settings › Accessibility › Touch) for the mouse: iOS gives apps a mouse only through it."),
+                      systemImage: "computermouse")
+            } header: {
+                Text(L("Keyboard and mouse"))
+            }
+
             Section {
                 // TODO(gestures): replace with the final iOS gesture list once the touch layer settles.
                 ForEach(Self.howToPlay, id: \.self) { line in

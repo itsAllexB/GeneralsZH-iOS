@@ -33,6 +33,8 @@
 //                      engine's default) -- GXUiScale.cpp reads this variable
 //                      directly (Android's SDL3Main.cpp copies it there from Options.ini; the iOS
 //                      SDL3Main.cpp does not, so the launcher does)
+//   GX_EXTERNAL_MAX_HEIGHT  Options.ini GXExternalMaxHeight (720...2160), when set: the cap of the
+//                      game's drawable on an external display (ExternalDisplayPlan.swift; 1080 without)
 //   GX_TRACE, GX_PERF, GX_AUDIO_TRACE, GX_TOUCH_DEBUG = "1"
 //                      when the matching diagnostics marker is on -- GXTrace.h and
 //                      SDL3GameEngine.cpp already honour these as alternatives to the marker
@@ -211,6 +213,11 @@ public enum LaunchPlanBuilder {
             if percent != InterfaceScale.defaultPercent {
                 env.append((uiScaleVariable, String(percent)))
             }
+        }
+        // GeneralsX @feature iOS port 11/11/2026 The external display's cap, an Options.ini-only setting.
+        if let text = options.value(for: ExternalRenderSize.maxHeightKey),
+           let lines = Int(text.trimmingCharacters(in: .whitespaces)), ExternalRenderSize.maxHeightRange.contains(lines) {
+            env.append((ExternalRenderSize.maxHeightVariable, String(lines)))
         }
         for marker in MarkerFile.diagnostics where marker.isPresent(in: paths) {
             if let name = marker.environmentVariable {
